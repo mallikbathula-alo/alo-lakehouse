@@ -8,6 +8,23 @@ Alo Yoga's Databricks Lakehouse — dbt project managing the medallion data plat
 
 ---
 
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Python Environment](#python-environment)
+- [dbt — Sample Runs](#dbt--sample-runs)
+- [When to Use dbt Python Models vs Standalone PySpark](#when-to-use-dbt-python-models-vs-standalone-pyspark)
+- [PySpark — Sample Runs](#pyspark--sample-runs)
+- [Architecture](#architecture)
+- [Common Commands](#common-commands)
+- [Unity Catalog Setup](#unity-catalog-setup)
+- [CI/CD](#cicd)
+- [Repository Structure](#repository-structure)
+- [Data Quality](#data-quality)
+- [AWS Accounts](#aws-accounts)
+
+---
+
 ## Quick Start
 
 ### Prerequisites
