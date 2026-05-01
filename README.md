@@ -27,8 +27,7 @@ Alo Yoga's Databricks Lakehouse — dbt project managing the medallion data plat
 ```bash
 git clone git@github.com:mallikbathula-alo/alo-lakehouse.git
 cd alo-lakehouse
-./scripts/setup.sh
-uv sync                  # installs dbt + databricks-connect into single .venv
+./scripts/setup.sh       # installs prerequisites, creates .venv, installs all deps
 ```
 
 After setup, configure credentials:
@@ -334,11 +333,9 @@ Managed locations: `s3://is-dev-lakehouse/{schema}` and `s3://is-prod-lakehouse/
 
 | Layer | Directory | Schema | Purpose |
 |-------|-----------|--------|---------|
-| Bronze | `lakehouse/models/1_bronze/` | `bronze` | Raw ingestion — Shopify, GA4, Braze, Salesforce |
-| Silver Pre | `lakehouse/models/2_silver_pre/` | `silver` | Staging, deduplication |
-| Silver | `lakehouse/models/3_silver/` | `silver` | Core dimensions & business logic |
-| Silver Post | `lakehouse/models/4_silver_post/` | `silver` | Silver aggregations |
-| Gold | `lakehouse/models/5_gold/` | `gold` | Analytics-ready for BI (Tableau, Thoughtspot, Hex) |
+| Bronze | `lakehouse/models/bronze/` | `bronze` | Raw ingestion — Shopify, GA4, Braze, Salesforce |
+| Silver | `lakehouse/models/silver/` | `silver` | Staging, deduplication, core dimensions & business logic |
+| Gold | `lakehouse/models/gold/` | `gold` | Analytics-ready for BI (Tableau, Thoughtspot, Hex) |
 | MGT | `lakehouse/models/mgt/` | `mgt` | Operational & management tables |
 
 ### Multi-Region Shopify
@@ -452,7 +449,8 @@ alo-lakehouse/
 │       ├── dev_account_setup.sh        # Storage credential + external location (CLI)
 │       ├── dev_workspace_setup.sql     # Catalog, schemas, grants
 │       ├── prod_account_setup.sh
-│       └── prod_workspace_setup.sql
+│       ├── prod_workspace_setup.sql
+│       └── groups_setup.sql            # Account-level group creation
 ├── jobs/
 │   └── alo-lakehouse.py                # Airflow DAG (MWAA)
 ├── montecarlo/                         # Data quality monitor definitions
@@ -465,17 +463,22 @@ alo-lakehouse/
 │   ├── dbt_project.yml
 │   ├── packages.yml
 │   ├── models/
-│   │   ├── sources.yml
-│   │   ├── 1_bronze/
-│   │   ├── 2_silver_pre/
-│   │   ├── 3_silver/
-│   │   ├── 4_silver_post/
-│   │   ├── 5_gold/
-│   │   └── mgt/
-│   ├── macros/
+│   │   ├── bronze/                     # Raw ingestion (br_ prefix)
+│   │   ├── silver/                     # Cleaned, deduped, business logic
+│   │   ├── gold/                       # Analytics-ready aggregations
+│   │   └── mgt/                        # Operational tables
+│   ├── macros/                         # grant_unity_catalog_permissions, generate_schema_name, etc.
 │   ├── snapshots/
+│   │   ├── c360/                       # Customer 360 SCD snapshots
+│   │   └── shopify/                    # Shopify SCD snapshots
 │   ├── seeds/
-│   ├── analyses/
+│   │   ├── ecom_shopify/               # Shopify reference data
+│   │   ├── holiday_calendar/           # Holiday calendar data
+│   │   └── public/                     # General reference tables (e.g. test_products)
+│   ├── tests/                          # Custom generic tests
+│   ├── analyses/                       # Ad-hoc analysis SQL
+│   ├── assets/                         # Static assets (e.g. images for dbt docs)
+│   ├── groups/                         # dbt group definitions
 │   └── pyspark/
 │       ├── utils/session.py            # get_spark() — Databricks Connect session
 │       └── examples/explore_catalog.py # Sample catalog explorer
