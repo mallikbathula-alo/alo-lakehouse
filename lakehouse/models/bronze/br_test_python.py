@@ -2,7 +2,7 @@
 Example dbt Python model using PySpark.
 
 This runs on the Databricks cluster (not locally) as part of the dbt DAG.
-Use {{ dbt.ref() }} and {{ dbt.source() }} exactly like SQL models.
+Use dbt.ref() and dbt.source() exactly like SQL models.
 
 Run:
     dbt run --select br_test_python
@@ -16,7 +16,7 @@ def model(dbt, spark):
     )
 
     # Read from the seed table created earlier
-    products = spark.table("dev.public.test_products")
+    products = dbt.ref("test_products")
 
     # Example transformation: add a margin column
     from pyspark.sql import functions as F

@@ -25,7 +25,9 @@ import yaml
 from databricks.connect import DatabricksSession
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env from repo root (three levels up from lakehouse/pyspark/utils/)
+_repo_root = Path(__file__).resolve().parents[3]
+load_dotenv(_repo_root / ".env")
 
 
 def _read_dbt_profiles() -> dict:
@@ -59,6 +61,12 @@ def get_spark() -> DatabricksSession:
             "Missing required Databricks credentials:\n"
             + "\n".join(f"  - {m}" for m in missing)
             + "\nSet env vars in .env or ensure ~/.dbt/profiles.yml is configured."
+        )
+
+    if len(token) < 20:
+        raise EnvironmentError(
+            f"DATABRICKS_TOKEN appears truncated (len={len(token)}). "
+            "Check for a stale DATABRICKS_TOKEN env var: run `unset DATABRICKS_TOKEN`"
         )
 
     return (

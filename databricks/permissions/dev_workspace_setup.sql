@@ -11,6 +11,10 @@ CREATE CATALOG IF NOT EXISTS alo_dev
   MANAGED LOCATION 's3://is-dev-lakehouse'
   COMMENT 'Alo Yoga lakehouse — development environment';
 
+-- Transfer ownership to data_engineering group so any DE admin can manage it.
+-- Metastore admin privilege is required to run this.
+ALTER CATALOG alo_dev OWNER TO `dev-data-engineering`;
+
 -- ── 2. Schemas ────────────────────────────────────────────────────────────────
 USE CATALOG alo_dev;
 
@@ -39,45 +43,45 @@ CREATE SCHEMA IF NOT EXISTS public
   COMMENT 'Reference / seed tables';
 
 -- ── 3. Catalog-level permissions ──────────────────────────────────────────────
-GRANT USE CATALOG, CREATE SCHEMA ON CATALOG alo_dev TO `data_engineering`;
-GRANT USE CATALOG ON CATALOG alo_dev TO `data_analyst`;
-GRANT USE CATALOG ON CATALOG alo_dev TO `data_scientist`;
-GRANT USE CATALOG ON CATALOG alo_dev TO `tableau`;
-GRANT USE CATALOG, CREATE SCHEMA ON CATALOG alo_dev TO `fivetran`;
-GRANT USE CATALOG ON CATALOG alo_dev TO `thoughtspot`;
-GRANT USE CATALOG ON CATALOG alo_dev TO `hex_report`;
-GRANT USE CATALOG ON CATALOG alo_dev TO `monte_carlo`;
-GRANT USE CATALOG ON CATALOG alo_dev TO `braze`;
+GRANT USE CATALOG, CREATE SCHEMA ON CATALOG alo_dev TO `dev-data-engineering`;
+-- GRANT USE CATALOG ON CATALOG alo_dev TO `data_analyst`;
+-- GRANT USE CATALOG ON CATALOG alo_dev TO `data_scientist`;
+-- GRANT USE CATALOG ON CATALOG alo_dev TO `tableau`;
+-- GRANT USE CATALOG, CREATE SCHEMA ON CATALOG alo_dev TO `fivetran`;
+-- GRANT USE CATALOG ON CATALOG alo_dev TO `thoughtspot`;
+-- GRANT USE CATALOG ON CATALOG alo_dev TO `hex_report`;
+-- GRANT USE CATALOG ON CATALOG alo_dev TO `monte_carlo`;
+-- GRANT USE CATALOG ON CATALOG alo_dev TO `braze`;
 
 -- ── 4. Schema-level permissions ───────────────────────────────────────────────
 -- data_engineering: full write access
-GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA alo_dev.bronze    TO `data_engineering`;
-GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA alo_dev.silver    TO `data_engineering`;
-GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA alo_dev.gold      TO `data_engineering`;
-GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA alo_dev.mgt       TO `data_engineering`;
-GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA alo_dev.snapshots TO `data_engineering`;
+GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA alo_dev.bronze    TO `dev-data-engineering`;
+GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA alo_dev.silver    TO `dev-data-engineering`;
+GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA alo_dev.gold      TO `dev-data-engineering`;
+GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA alo_dev.mgt       TO `dev-data-engineering`;
+GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA alo_dev.snapshots TO `dev-data-engineering`;
 
--- data_analyst: read silver + gold
-GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.silver TO `data_analyst`;
-GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.gold   TO `data_analyst`;
+-- -- data_analyst: read silver + gold
+-- GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.silver TO `data_analyst`;
+-- GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.gold   TO `data_analyst`;
 
--- data_scientist: read all layers
-GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.bronze TO `data_scientist`;
-GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.silver TO `data_scientist`;
-GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.gold   TO `data_scientist`;
+-- -- data_scientist: read all layers
+-- GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.bronze TO `data_scientist`;
+-- GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.silver TO `data_scientist`;
+-- GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.gold   TO `data_scientist`;
 
--- BI tools: read gold
-GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.gold TO `tableau`;
-GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.gold TO `thoughtspot`;
-GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.gold TO `hex_report`;
+-- -- BI tools: read gold
+-- GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.gold TO `tableau`;
+-- GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.gold TO `thoughtspot`;
+-- GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.gold TO `hex_report`;
 
--- Monte Carlo: read bronze/silver/gold for monitoring
-GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.bronze TO `monte_carlo`;
-GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.silver TO `monte_carlo`;
-GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.gold   TO `monte_carlo`;
+-- -- Monte Carlo: read bronze/silver/gold for monitoring
+-- GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.bronze TO `monte_carlo`;
+-- GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.silver TO `monte_carlo`;
+-- GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.gold   TO `monte_carlo`;
 
--- Braze: read bronze only
-GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.bronze TO `braze`;
+-- -- Braze: read bronze only
+-- GRANT USE SCHEMA, SELECT ON ALL TABLES IN SCHEMA alo_dev.bronze TO `braze`;
 
--- Fivetran: write to bronze
-GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA alo_dev.bronze TO `fivetran`;
+-- -- Fivetran: write to bronze
+-- GRANT USE SCHEMA, SELECT, MODIFY, CREATE TABLE ON SCHEMA alo_dev.bronze TO `fivetran`;

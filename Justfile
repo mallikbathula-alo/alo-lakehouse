@@ -90,18 +90,14 @@ run-full-refresh-prod-local model:
         --vars '{"source_catalog": "alo_prod"}' --full-refresh
 
 # ── PySpark / Databricks Connect ─────────────────────────────────────────────
-# Isolated venv — separate from dbt due to databricks-sdk version conflict.
-# Requires: .env with DATABRICKS_HOST, DATABRICKS_TOKEN, DATABRICKS_CLUSTER_ID
-
-pyspark-install:
-    uv venv pyspark/.venv --python 3.12
-    uv pip install --python pyspark/.venv -r pyspark/requirements.txt
+# Uses the shared .venv (databricks-connect ships with dbt-databricks 1.10+).
+# Requires: .env with DATABRICKS_CLUSTER_ID
 
 pyspark-run script:
-    cd pyspark && .venv/bin/python {{script}}
+    cd lakehouse/pyspark && ../../.venv/bin/python {{script}}
 
 pyspark-shell:
-    cd pyspark && .venv/bin/python -c "\
+    cd lakehouse/pyspark && ../../.venv/bin/python -c "\
         from utils.session import get_spark; \
         spark = get_spark(); \
         print('SparkSession ready — use spark.<tab>'); \

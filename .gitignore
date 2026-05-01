@@ -40,3 +40,6 @@ logs/
 
 # uv
 .python-version
+
+# Claude
+CLAUDE.md

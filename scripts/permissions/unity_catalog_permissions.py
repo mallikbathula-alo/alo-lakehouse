@@ -69,22 +69,22 @@ CATALOG_PERMISSIONS: dict[str, dict] = {
 
 CATALOG_LEVEL_PERMISSIONS: dict[str, dict] = {
     "alo_dev": {
-        "data_engineering": ["USE CATALOG", "CREATE SCHEMA"],
+        "data_engineering": ["USE CATALOG"],
         "data_analyst":     ["USE CATALOG"],
         "data_scientist":   ["USE CATALOG"],
         "tableau":          ["USE CATALOG"],
-        "fivetran":         ["USE CATALOG", "CREATE SCHEMA"],
+        "fivetran":         ["USE CATALOG"],
         "thoughtspot":      ["USE CATALOG"],
         "hex_report":       ["USE CATALOG"],
         "monte_carlo":      ["USE CATALOG"],
         "braze":            ["USE CATALOG"],
     },
     "alo_prod": {
-        "data_engineering": ["USE CATALOG", "CREATE SCHEMA"],
+        "data_engineering": ["USE CATALOG"], # "CREATE SCHEMA"
         "data_analyst":     ["USE CATALOG"],
         "data_scientist":   ["USE CATALOG"],
         "tableau":          ["USE CATALOG"],
-        "fivetran":         ["USE CATALOG", "CREATE SCHEMA"],
+        "fivetran":         ["USE CATALOG"],  #"CREATE SCHEMA"],
         "thoughtspot":      ["USE CATALOG"],
         "hex_report":       ["USE CATALOG"],
         "monte_carlo":      ["USE CATALOG"],

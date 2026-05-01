@@ -1,8 +1,0 @@
-# Isolated PySpark environment — separate from the dbt venv.
-# databricks-connect requires databricks-sdk>=0.29.0 which conflicts with
-# dbt-databricks==1.9.4 (pins databricks-sdk==0.17.0), so these cannot share a venv.
-#
-# Install via: just pyspark-install
-databricks-connect>=15.4.0,<16.0.0
-python-dotenv>=1.0.0
-pyyaml>=6.0.0

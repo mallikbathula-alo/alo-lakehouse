@@ -6,7 +6,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 LAKEHOUSE_DIR="$ROOT_DIR/lakehouse"
-PYSPARK_DIR="$ROOT_DIR/pyspark"
 
 echo "🏠 alo-lakehouse setup starting..."
 
@@ -62,21 +61,13 @@ cd "$LAKEHOUSE_DIR"
 "$ROOT_DIR/.venv/bin/dbt" deps
 echo "✅ dbt packages installed."
 
-# ── 4. Set up PySpark / Databricks Connect venv (isolated) ───────────────────
-# databricks-connect requires databricks-sdk>=0.29 which conflicts with
-# dbt-databricks==1.9.4 (pins ==0.17), so it lives in its own venv.
-echo "⚡ Setting up PySpark / Databricks Connect environment..."
-uv venv "$PYSPARK_DIR/.venv" --python 3.12
-uv pip install --python "$PYSPARK_DIR/.venv" -r "$PYSPARK_DIR/requirements.txt"
-echo "✅ PySpark venv ready at pyspark/.venv"
-
-# ── 5. Install pre-commit hooks ───────────────────────────────────────────────
+# ── 4. Install pre-commit hooks ───────────────────────────────────────────────
 echo "🔗 Installing pre-commit hooks..."
 cd "$ROOT_DIR"
 pre-commit install
 echo "✅ Pre-commit hooks installed."
 
-# ── 6. Fetch latest manifest from S3 (for --defer support) ───────────────────
+# ── 5. Fetch latest manifest from S3 (for --defer support) ───────────────────
 echo "📥 Fetching dev manifest from S3..."
 mkdir -p "$LAKEHOUSE_DIR/target"
 if aws s3 cp s3://alo-dev-de-docs/manifest.json "$LAKEHOUSE_DIR/target/manifest.json" 2>/dev/null; then
@@ -85,7 +76,7 @@ else
     echo "⚠️  Could not fetch manifest (S3 access may not be configured yet). Skipping."
 fi
 
-# ── 7. Write local profiles.yml ───────────────────────────────────────────────
+# ── 6. Write local profiles.yml ───────────────────────────────────────────────
 DBT_PROFILES_DIR="$HOME/.dbt"
 mkdir -p "$DBT_PROFILES_DIR"
 
@@ -116,7 +107,7 @@ PROFILES
     echo "   - schema:    e.g. dbt_$(whoami)"
 fi
 
-# ── 8. Create .env for PySpark (if not present) ───────────────────────────────
+# ── 7. Create .env for PySpark (if not present) ───────────────────────────────
 if [[ ! -f "$ROOT_DIR/.env" ]]; then
     cat > "$ROOT_DIR/.env" << 'DOTENV'
 # PySpark / Databricks Connect — required for just pyspark-run / pyspark-shell
@@ -132,7 +123,7 @@ else
     echo "ℹ️  .env already exists — skipping."
 fi
 
-# ── 9. Configure Databricks CLI ───────────────────────────────────────────────
+# ── 8. Configure Databricks CLI ───────────────────────────────────────────────
 if ! databricks auth profiles 2>/dev/null | grep -q "DEFAULT\|dev\|prod"; then
     echo ""
     echo "⚙️  Databricks CLI not configured. Run the following to configure:"
