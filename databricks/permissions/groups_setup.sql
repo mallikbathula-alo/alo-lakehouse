@@ -1,0 +1,20 @@
+-- ──────────────────────────────────────────────────────────────────────────────
+-- Unity Catalog Groups Setup
+-- Run once at the Databricks account level (not workspace level).
+-- Groups are account-scoped and shared across dev and prod workspaces.
+--
+-- Run via Databricks CLI:
+--   databricks groups create --display-name <group>
+-- Or in the Databricks account console: accounts.cloud.databricks.com
+-- ──────────────────────────────────────────────────────────────────────────────
+
+-- databricks groups create --display-name data_engineering
+-- databricks groups create --display-name data_analyst
+-- databricks groups create --display-name data_scientist
+-- databricks groups create --display-name tableau
+-- databricks groups create --display-name fivetran
+-- databricks groups create --display-name thoughtspot
+-- databricks groups create --display-name hex_report
+-- databricks groups create --display-name monte_carlo
+-- databricks groups create --display-name braze
+-- databricks groups create --display-name read_only_users

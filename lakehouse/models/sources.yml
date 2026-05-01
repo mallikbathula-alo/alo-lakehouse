@@ -1,0 +1,139 @@
+version: 2
+
+sources:
+
+  # ── Shopify (via Fivetran → Unity Catalog bronze) ─────────────────────────
+  - name: src_shopify_us
+    database: "{{ var('source_catalog') }}"
+    schema: bronze
+    description: "Shopify US raw tables ingested via Fivetran"
+    freshness:
+      warn_after: {count: "{{ var('warn_hours') }}", period: hour}
+      error_after: {count: "{{ var('error_hours') }}", period: hour}
+    loaded_at_field: _fivetran_synced
+    tables:
+      - name: orders
+      - name: customers
+      - name: order_line
+      - name: products
+      - name: product_variant
+      - name: refund
+      - name: order_adjustment
+      - name: fulfillment
+
+  - name: src_shopify_can
+    database: "{{ var('source_catalog') }}"
+    schema: bronze
+    description: "Shopify Canada raw tables ingested via Fivetran"
+    freshness:
+      warn_after: {count: "{{ var('warn_hours') }}", period: hour}
+      error_after: {count: "{{ var('error_hours') }}", period: hour}
+    loaded_at_field: _fivetran_synced
+    tables:
+      - name: orders
+      - name: customers
+      - name: order_line
+      - name: products
+      - name: product_variant
+
+  - name: src_shopify_uk
+    database: "{{ var('source_catalog') }}"
+    schema: bronze
+    description: "Shopify UK raw tables ingested via Fivetran"
+    freshness:
+      warn_after: {count: "{{ var('warn_hours') }}", period: hour}
+      error_after: {count: "{{ var('error_hours') }}", period: hour}
+    loaded_at_field: _fivetran_synced
+    tables:
+      - name: orders
+      - name: customers
+      - name: order_line
+      - name: products
+      - name: product_variant
+
+  - name: src_shopify_intl
+    database: "{{ var('source_catalog') }}"
+    schema: bronze
+    description: "Shopify International raw tables ingested via Fivetran"
+    freshness:
+      warn_after: {count: "{{ var('warn_hours') }}", period: hour}
+      error_after: {count: "{{ var('error_hours') }}", period: hour}
+    loaded_at_field: _fivetran_synced
+    tables:
+      - name: orders
+      - name: customers
+      - name: order_line
+      - name: products
+      - name: product_variant
+
+  # ── GA4 (via Fivetran BigQuery export) ────────────────────────────────────
+  - name: src_ga4
+    database: "{{ var('source_catalog') }}"
+    schema: bronze
+    description: "Google Analytics 4 event data exported from BigQuery via Fivetran"
+    freshness:
+      warn_after: {count: "{{ var('warn_hours') }}", period: hour}
+      error_after: {count: "{{ var('error_hours') }}", period: hour}
+    loaded_at_field: event_timestamp
+    tables:
+      - name: events
+
+  # ── Braze (Currents export) ────────────────────────────────────────────────
+  - name: src_braze
+    database: "{{ var('source_catalog') }}"
+    schema: bronze
+    description: "Braze Currents event data"
+    freshness:
+      warn_after: {count: "{{ var('warn_hours') }}", period: hour}
+      error_after: {count: "{{ var('error_hours') }}", period: hour}
+    loaded_at_field: time
+    tables:
+      - name: users_messages_email_send
+      - name: users_messages_email_open
+      - name: users_messages_email_click
+      - name: users_messages_push_send
+
+  # ── Salesforce (via Fivetran) ─────────────────────────────────────────────
+  - name: src_salesforce
+    database: "{{ var('source_catalog') }}"
+    schema: bronze
+    description: "Salesforce CRM data ingested via Fivetran"
+    freshness:
+      warn_after: {count: "{{ var('warn_days') }}", period: day}
+      error_after: {count: "{{ var('error_days') }}", period: day}
+    loaded_at_field: _fivetran_synced
+    tables:
+      - name: account
+      - name: contact
+      - name: opportunity
+      - name: lead
+
+  # ── Kinesis (Shopify real-time stream) ────────────────────────────────────
+  - name: br_src_shopify_us
+    database: "{{ var('source_catalog') }}"
+    schema: bronze
+    description: "Shopify US Kinesis streaming raw events"
+    tables:
+      - name: orders
+      - name: customers
+
+  - name: br_src_shopify_can
+    database: "{{ var('source_catalog') }}"
+    schema: bronze
+    tables:
+      - name: orders
+      - name: customers
+
+  - name: br_src_shopify_uk
+    database: "{{ var('source_catalog') }}"
+    schema: bronze
+    tables:
+      - name: orders
+      - name: customers
+
+  - name: br_src_shopify_intl
+    database: "{{ var('source_catalog') }}"
+    schema: bronze
+    tables:
+      - name: orders
+      - name: customers

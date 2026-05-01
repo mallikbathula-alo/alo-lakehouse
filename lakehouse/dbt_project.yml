@@ -1,0 +1,153 @@
+name: "lakehouse"
+version: "1.0.0"
+config-version: 2
+
+profile: "lakehouse"
+
+# ── Path Configuration ─────────────────────────────────────────────────────────
+model-paths:    ["models", "groups"]
+analysis-paths: ["analyses"]
+asset-paths:    ["assets"]
+test-paths:     ["tests"]
+seed-paths:     ["seeds"]
+macro-paths:    ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# ── Hooks ──────────────────────────────────────────────────────────────────────
+on-run-end:
+  - "{{ grant_unity_catalog_permissions(schemas, 'read_only_users') }}"
+
+models:
+  lakehouse:
+    +bind: false
+    # Delta tables in CI/dev/prod; views for local development
+    +materialized: "{{ env_var('DBT_MATERIALIZATION', 'view') }}"
+    # Delta Lake format — enables Z-Order, liquid clustering, OPTIMIZE, VACUUM
+    +file_format: delta
+    +grants:
+      select:
+        - "data_engineering"
+        - "data_analyst"
+        - "data_scientist"
+        - "tableau"
+        - "fivetran"
+        - "thoughtspot"
+        - "hex_report"
+        - "monte_carlo"
+      # Note: INSERT/UPDATE/DELETE managed via Unity Catalog RBAC, not dbt grants
+
+    # ── Medallion Layer → Unity Catalog Schema Mapping ─────────────────────────
+    bronze:
+      +schema: bronze
+    silver:
+      +schema: silver
+    gold:
+      +schema: gold
+    c360:
+      +schema: gold
+    mgt:
+      +schema: mgt
+      salesforce_sync:
+        +schema: salesforce_sync
+
+# ── Seeds ──────────────────────────────────────────────────────────────────────
+seeds:
+  lakehouse:
+    public:
+      +schema: public
+    cq:
+      +schema: bronze
+      +column_types:
+        item: string
+        demographic: string
+        sales_category: string
+        ppg: string
+        product_type: string
+        collection: string
+        fabric_family: string
+        color_family: string
+        cost: string
+        dummy: string
+    holiday_calendar:
+      +schema: bronze
+    invent_bella_mapping:
+      +schema: bronze
+      state_to_region_mapping:
+        +column_types:
+          State: string
+          State_Code: string
+          Region: string
+    ecom_shopify:
+      +schema: bronze
+
+# ── Snapshots ──────────────────────────────────────────────────────────────────
+snapshots:
+  lakehouse:
+    +target_schema: snapshots
+    +file_format: delta
+    +invalidate_hard_deletes: true
+
+# ── Variables ──────────────────────────────────────────────────────────────────
+vars:
+  shopify_platforms:
+    {
+      "yoga-us":     "src_shopify_us",
+      "yoga-canada": "src_shopify_can",
+      "yoga-uk":     "src_shopify_uk",
+      "yoga-intl":   "src_shopify_intl",
+    }
+
+  br_shopify_platforms:
+    {
+      "yoga-us":     "br_src_shopify_us",
+      "yoga-canada": "br_src_shopify_can",
+      "yoga-uk":     "br_src_shopify_uk",
+      "yoga-intl":   "br_src_shopify_intl",
+    }
+
+  shopify_platforms_retail:
+    {
+      "yoga-us":     "src_shopify_us_retail_only",
+      "yoga-canada": "src_shopify_can",
+      "yoga-uk":     "src_shopify_uk",
+      "yoga-us-2":   "src_shopify_us",
+      "yoga-intl":   "src_shopify_intl",
+    }
+
+  platform_currency:
+    {
+      "yoga-us":     "USD",
+      "yoga-canada": "CAD",
+      "yoga-uk":     "GBP",
+      "yoga-intl":   "EUR",
+      "yoga-nl":     "EUR",
+      "yoga-kor":    "KRW",
+      "yoga-ita":    "EUR",
+    }
+
+  platform_code:
+    { "yoga-us": "US", "yoga-canada": "CA", "yoga-uk": "UK", "yoga-intl": "INTL" }
+
+  environment: "{{ env_var('ENV', 'dev') }}"
+
+  # Source catalog: alo_dev for local/CI, alo_prod for production
+  # Override: --vars '{"source_catalog": "alo_prod"}' to read prod data locally
+  source_catalog: "{{ env_var('SOURCE_CATALOG', 'alo_dev') }}"
+
+  warn_hours:  12
+  error_hours: 24
+  warn_days:   1
+  error_days:  2
+
+  retention_date:           "2022-12-30"
+  graphql_cut_off_datetime: "{{ '2025-02-10T00:00:00' if env_var('ENV', 'dev') == 'dev' else '2025-02-25T00:00:00' }}"
+  sts_cutoff_date:          "{{ '2025-10-06' }}"
+  preorder_cutoff_date:     "{{ '2026-02-16' if env_var('ENV', 'dev') == 'dev' else '2026-02-24' }}"
+  shopify_product_variant_active_list_cutoff_date: "{{ '2026-01-13' }}"
+
+  'dbt_date:time_zone': 'US/Pacific'

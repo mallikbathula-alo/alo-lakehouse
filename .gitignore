@@ -1,0 +1,42 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+dist/
+*.egg-info/
+.eggs/
+
+# dbt
+lakehouse/target/
+lakehouse/dbt_packages/
+lakehouse/logs/
+profiles.yml
+
+# Secrets / credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Databricks
+.databricks/
+databricks.yml.local
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# uv
+.python-version

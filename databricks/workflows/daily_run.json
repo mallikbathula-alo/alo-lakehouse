@@ -1,0 +1,87 @@
+{
+  "name": "alo-lakehouse-daily-run",
+  "description": "Daily dbt medallion pipeline: bronze → silver → gold",
+  "tags": {
+    "project": "alo-lakehouse",
+    "schedule": "daily"
+  },
+  "schedule": {
+    "quartz_cron_expression": "0 0 4 * * ?",
+    "timezone_id": "America/Los_Angeles",
+    "pause_status": "UNPAUSED"
+  },
+  "max_concurrent_runs": 1,
+  "timeout_seconds": 7200,
+  "health": {
+    "rules": [
+      {
+        "metric": "RUN_DURATION_SECONDS",
+        "op": "GREATER_THAN",
+        "value": 5400
+      }
+    ]
+  },
+  "email_notifications": {
+    "on_failure": ["data-engineering@aloyoga.com"],
+    "no_alert_for_skipped_runs": false
+  },
+  "tasks": [
+    {
+      "task_key": "bronze",
+      "description": "Run all bronze ingestion models",
+      "job_cluster_key": "dbt_cluster",
+      "python_wheel_task": {
+        "package_name": "dbt_databricks",
+        "entry_point": "dbt"
+      },
+      "libraries": [
+        {"pypi": {"package": "dbt-databricks==1.9.4"}}
+      ],
+      "spark_python_task": null,
+      "notebook_task": null,
+      "run_if": "ALL_SUCCESS"
+    },
+    {
+      "task_key": "silver",
+      "description": "Run all silver transformation models",
+      "depends_on": [{"task_key": "bronze"}],
+      "job_cluster_key": "dbt_cluster",
+      "run_if": "ALL_SUCCESS"
+    },
+    {
+      "task_key": "gold",
+      "description": "Run all gold analytics models",
+      "depends_on": [{"task_key": "silver"}],
+      "job_cluster_key": "dbt_cluster",
+      "run_if": "ALL_SUCCESS"
+    },
+    {
+      "task_key": "dbt_tests",
+      "description": "Run dbt tests across all layers",
+      "depends_on": [{"task_key": "gold"}],
+      "job_cluster_key": "dbt_cluster",
+      "run_if": "ALL_SUCCESS"
+    }
+  ],
+  "job_clusters": [
+    {
+      "job_cluster_key": "dbt_cluster",
+      "new_cluster": {
+        "spark_version": "15.4.x-scala2.12",
+        "node_type_id": "i3.xlarge",
+        "num_workers": 4,
+        "spark_conf": {
+          "spark.databricks.delta.preview.enabled": "true",
+          "spark.sql.shuffle.partitions": "200"
+        },
+        "spark_env_vars": {
+          "DBT_MATERIALIZATION": "table"
+        },
+        "custom_tags": {
+          "project": "alo-lakehouse",
+          "team": "data-engineering"
+        }
+      }
+    }
+  ]
+}

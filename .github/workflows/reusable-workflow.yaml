@@ -1,0 +1,172 @@
+name: Reusable Deployment Workflow
+
+on:
+  workflow_call:
+    inputs:
+      env:
+        required: true
+        type: string
+        description: "Target environment: dev | prod"
+      aws_account_id:
+        required: true
+        type: string
+        description: "AWS account ID for the environment"
+      tag:
+        required: false
+        type: string
+        default: "latest"
+        description: "Docker image tag (used for prod versioned releases)"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ── 1. Generate + upload dbt docs and manifest ────────────────────────────
+  deploy-dbt-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup dbt + Databricks
+        uses: ./.github/actions/dbt
+        with:
+          env: ${{ inputs.env }}
+          aws_account_id: ${{ inputs.aws_account_id }}
+
+      - name: Generate dbt docs and manifest
+        working-directory: lakehouse
+        run: |
+          ../.venv/bin/dbt docs generate --target ${{ inputs.env }}
+
+      - name: Upload manifest + catalog to S3
+        run: |
+          aws s3 sync lakehouse/target/ s3://alo-${{ inputs.env }}-de-docs/ \
+            --exclude "*" \
+            --include "manifest.json" \
+            --include "catalog.json" \
+            --include "index.html" \
+            --delete
+
+      - name: Apply Unity Catalog permissions
+        run: |
+          uv run python scripts/permissions/unity_catalog_permissions.py \
+            --env ${{ inputs.env }} \
+            --dry-run false
+
+  # ── 2. Build + push Docker image to ECR ───────────────────────────────────
+  deploy-dbt-image:
+    runs-on: ubuntu-latest
+    needs: deploy-dbt-artifacts
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/gha-alo-lakehouse
+          aws-region: us-east-1
+
+      - name: Get Databricks token for Docker build
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id alo/databricks/${{ inputs.env }} \
+            --query SecretString --output text)
+          echo "DBT_HOST=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['host'])")" >> $GITHUB_ENV
+          echo "DBT_HTTP_PATH=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['http_path'])")" >> $GITHUB_ENV
+          TOKEN=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+          echo "::add-mask::$TOKEN"
+          echo "DBT_TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - name: Write profiles.yml for Docker image
+        run: envsubst < .github/workflows/support/profiles.yml.txt > profiles.yml
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        run: |
+          ECR="${{ inputs.aws_account_id }}.dkr.ecr.us-east-1.amazonaws.com/alo-lakehouse"
+          docker buildx build \
+            --platform linux/amd64 \
+            --build-arg env=${{ inputs.env }} \
+            --push \
+            -t "$ECR:latest" \
+            -t "$ECR:${{ inputs.tag }}" \
+            .
+
+  # ── 3. Sync Airflow DAGs to MWAA S3 bucket ───────────────────────────────
+  deploy-dag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/gha-alo-lakehouse
+          aws-region: us-east-1
+
+      - name: Sync DAGs to MWAA
+        run: |
+          aws s3 sync jobs/ s3://alo-${{ inputs.env }}-mwaa-bucket/dags/ \
+            --exclude "*" \
+            --include "*.py" \
+            --delete
+
+  # ── 4. Deploy Databricks Workflow definitions ─────────────────────────────
+  deploy-databricks-workflows:
+    runs-on: ubuntu-latest
+    needs: deploy-dbt-image
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/gha-alo-lakehouse
+          aws-region: us-east-1
+
+      - name: Install uv + databricks-sdk
+        uses: astral-sh/setup-uv@v4
+
+      - name: Sync Databricks workflow definitions
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id alo/databricks/${{ inputs.env }} \
+            --query SecretString --output text)
+          export DATABRICKS_HOST=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['host'])")
+          TOKEN=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+          echo "::add-mask::$TOKEN"
+          export DATABRICKS_TOKEN=$TOKEN
+          uv run python scripts/deploy_workflows.py --env ${{ inputs.env }}
+
+  # ── 5. Apply Monte Carlo monitors (prod only, if monitors changed) ─────────
+  deploy-montecarlo-monitors:
+    runs-on: ubuntu-latest
+    needs: deploy-dbt-artifacts
+    if: inputs.env == 'prod'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/gha-alo-lakehouse
+          aws-region: us-east-1
+
+      - name: Get Monte Carlo credentials
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id alo/montecarlo \
+            --query SecretString --output text)
+          echo "MCD_DEFAULT_API_ID=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['api_id'])")" >> $GITHUB_ENV
+          TOKEN=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['api_token'])")
+          echo "::add-mask::$TOKEN"
+          echo "MCD_DEFAULT_API_TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - name: Install montecarlodata
+        run: pip install montecarlodata==0.124.0 --break-system-packages
+
+      - name: Apply Monte Carlo monitors
+        run: montecarlo monitors apply --auto-yes

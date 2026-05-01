@@ -1,0 +1,48 @@
+lakehouse:
+  outputs:
+
+    local:
+      type: databricks
+      host: "${DBT_HOST}"
+      http_path: "${DBT_HTTP_PATH}"
+      token: "${DBT_TOKEN}"
+      catalog: alo_dev
+      schema: "dbt_${USER}"
+      threads: 8
+      connect_timeout: 60
+      connect_retries: 3
+
+    ci:
+      type: databricks
+      host: "${DBT_HOST}"
+      http_path: "${DBT_HTTP_PATH}"
+      token: "${DBT_TOKEN}"
+      catalog: alo_dev
+      schema: "ci_${GITHUB_SHA}"
+      threads: 16
+      connect_timeout: 60
+      connect_retries: 3
+
+    dev:
+      type: databricks
+      host: "${DBT_HOST}"
+      http_path: "${DBT_HTTP_PATH}"
+      token: "${DBT_TOKEN}"
+      catalog: alo_dev
+      schema: dbt_dev
+      threads: 16
+      connect_timeout: 60
+      connect_retries: 3
+
+    prod:
+      type: databricks
+      host: "${DBT_HOST}"
+      http_path: "${DBT_HTTP_PATH}"
+      token: "${DBT_TOKEN}"
+      catalog: alo_prod
+      schema: dbt_prod
+      threads: 32
+      connect_timeout: 60
+      connect_retries: 3
+
+  target: local

@@ -1,0 +1,79 @@
+name: "Setup dbt + Databricks"
+description: >
+  Composite action that configures AWS OIDC credentials, retrieves Databricks
+  service-principal tokens from Secrets Manager, writes profiles.yml, and runs
+  dbt debug to verify connectivity.
+
+inputs:
+  env:
+    description: "Target environment: dev | prod"
+    required: true
+  aws_account_id:
+    description: "AWS Account ID for the target environment"
+    required: true
+
+outputs:
+  dbt_host:
+    description: "Databricks workspace host"
+    value: ${{ steps.get-secrets.outputs.dbt_host }}
+
+runs:
+  using: "composite"
+  steps:
+    # ── 1. Configure AWS OIDC credentials ──────────────────────────────────
+    - name: Configure AWS credentials (OIDC)
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/gha-alo-lakehouse
+        aws-region: us-east-1
+
+    # ── 2. Pull Databricks secrets from AWS Secrets Manager ────────────────
+    - name: Retrieve Databricks connection secrets
+      id: get-secrets
+      shell: bash
+      run: |
+        SECRET=$(aws secretsmanager get-secret-value \
+          --secret-id alo/databricks/${{ inputs.env }} \
+          --query SecretString --output text)
+
+        DBT_HOST=$(echo "$SECRET"     | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['host'])")
+        DBT_HTTP_PATH=$(echo "$SECRET" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['http_path'])")
+        DBT_TOKEN=$(echo "$SECRET"    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['token'])")
+
+        echo "dbt_host=$DBT_HOST"         >> "$GITHUB_OUTPUT"
+        echo "DBT_HOST=$DBT_HOST"         >> "$GITHUB_ENV"
+        echo "DBT_HTTP_PATH=$DBT_HTTP_PATH" >> "$GITHUB_ENV"
+        echo "::add-mask::$DBT_TOKEN"
+        echo "DBT_TOKEN=$DBT_TOKEN"       >> "$GITHUB_ENV"
+
+    # ── 3. Write profiles.yml ───────────────────────────────────────────────
+    - name: Write dbt profiles.yml
+      shell: bash
+      run: |
+        mkdir -p ~/.dbt
+        envsubst < .github/workflows/support/profiles.yml.txt > ~/.dbt/profiles.yml
+
+    # ── 4. Install uv & dbt dependencies ───────────────────────────────────
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+
+    - name: Install Python dependencies
+      shell: bash
+      run: uv sync --frozen
+
+    - name: Install dbt packages
+      shell: bash
+      run: cd lakehouse && ../.venv/bin/dbt deps
+
+    # ── 5. Verify Databricks connectivity ──────────────────────────────────
+    - name: dbt debug (verify connection)
+      shell: bash
+      run: |
+        cd lakehouse
+        for i in 1 2 3; do
+          ../.venv/bin/dbt debug --target ${{ inputs.env }} && break
+          echo "Retry $i/3 — waiting 10s..."
+          sleep 10
+        done

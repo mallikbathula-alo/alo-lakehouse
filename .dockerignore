@@ -1,0 +1,11 @@
+.venv/
+.git/
+.github/
+lakehouse/target/
+lakehouse/dbt_packages/
+lakehouse/logs/
+logs/
+*.log
+.DS_Store
+__pycache__/
+*.pyc

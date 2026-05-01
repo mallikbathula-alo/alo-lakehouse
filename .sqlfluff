@@ -1,0 +1,33 @@
+[sqlfluff]
+dialect = sparksql
+templater = dbt
+project_dir = ./lakehouse
+target = local
+max_line_length = 90
+
+[sqlfluff:indentation]
+indented_joins = false
+indented_using_on = true
+template_blocks_indent = false
+
+[sqlfluff:layout:type:comma]
+spacing_before = touch
+line_position = trailing
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.identifiers]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = lower
+
+[sqlfluff:templater:dbt]
+project_dir = ./lakehouse
+profiles_dir = ~/.dbt
+profile = lakehouse
+target = local

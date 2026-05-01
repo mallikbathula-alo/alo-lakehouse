@@ -1,0 +1,11 @@
+montecarlo:
+  notifications:
+    slack:
+      - name: DE Incident Channel
+        channel: C0379QP6BC4
+        audience: DE Incident Channel
+        is_private: true
+      - name: de-oncall-support
+        channel: C09J5VDQ9FF
+        audience: de-oncall-support
+        is_private: true

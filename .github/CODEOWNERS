@@ -1,0 +1,13 @@
+# Default owners for all files — Data Engineering team must review all PRs
+* @alo-yoga/data-engineering
+
+# CI/CD workflows require senior DE review
+.github/workflows/ @alo-yoga/data-engineering-leads
+scripts/cd/        @alo-yoga/data-engineering-leads
+
+# Databricks infrastructure changes
+databricks/        @alo-yoga/data-engineering-leads
+scripts/permissions/ @alo-yoga/data-engineering-leads
+
+# Monte Carlo monitors
+montecarlo/        @alo-yoga/data-engineering

@@ -1,0 +1,46 @@
+name: Detect Changed Files
+
+on:
+  workflow_call:
+    outputs:
+      lakehouse_changed:
+        description: "True if any lakehouse/ SQL or YAML files changed"
+        value: ${{ jobs.detect.outputs.lakehouse_changed }}
+      montecarlo_changed:
+        description: "True if any montecarlo/ files changed"
+        value: ${{ jobs.detect.outputs.montecarlo_changed }}
+      databricks_changed:
+        description: "True if any databricks/ workflow definitions changed"
+        value: ${{ jobs.detect.outputs.databricks_changed }}
+      jobs_changed:
+        description: "True if any jobs/ (Airflow DAG) files changed"
+        value: ${{ jobs.detect.outputs.jobs_changed }}
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      lakehouse_changed:   ${{ steps.changes.outputs.lakehouse }}
+      montecarlo_changed:  ${{ steps.changes.outputs.montecarlo }}
+      databricks_changed:  ${{ steps.changes.outputs.databricks }}
+      jobs_changed:        ${{ steps.changes.outputs.jobs }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            lakehouse:
+              - 'lakehouse/**/*.sql'
+              - 'lakehouse/**/*.yml'
+              - 'lakehouse/**/*.yaml'
+            montecarlo:
+              - 'montecarlo/**'
+            databricks:
+              - 'databricks/**'
+            jobs:
+              - 'jobs/**'

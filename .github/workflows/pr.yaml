@@ -1,0 +1,161 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write   # OIDC → AWS
+  contents: read
+  pull-requests: write
+
+jobs:
+  # ── Detect which parts of the repo changed ────────────────────────────────
+  changed-files:
+    uses: ./.github/workflows/changed-files.yaml
+
+  # ── Validate PR title follows conventional commits ─────────────────────────
+  check-pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Pre-commit linting (sqlfmt + sqlfluff + ruff + dbt-checkpoint) ─────────
+  linting:
+    runs-on: ubuntu-latest
+    needs: changed-files
+    if: needs.changed-files.outputs.lakehouse_changed == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup dbt + Databricks (dev)
+        uses: ./.github/actions/dbt
+        with:
+          env: ci
+          aws_account_id: ${{ vars.AWS_ACCOUNT_ID_DEV }}
+
+      - name: Cache pre-commit hooks
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Get changed SQL/YAML files
+        id: changed
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            lakehouse/**/*.sql
+            lakehouse/**/*.yml
+
+      - name: Run pre-commit on changed files
+        if: steps.changed.outputs.any_changed == 'true'
+        run: |
+          uv run pre-commit run --files ${{ steps.changed.outputs.all_changed_files }}
+
+  # ── dbt CI run: compile + slim run against dev workspace ───────────────────
+  dbt-validate:
+    runs-on: ubuntu-latest
+    needs: [changed-files, linting]
+    if: needs.changed-files.outputs.lakehouse_changed == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup dbt + Databricks (ci)
+        uses: ./.github/actions/dbt
+        with:
+          env: ci
+          aws_account_id: ${{ vars.AWS_ACCOUNT_ID_DEV }}
+
+      - name: Fetch manifest from S3 (for --defer)
+        run: |
+          aws s3 cp s3://alo-dev-de-docs/manifest.json lakehouse/target/manifest.json
+
+      - name: dbt snapshot (modified)
+        working-directory: lakehouse
+        env:
+          DBT_MATERIALIZATION: table
+        run: |
+          ../.venv/bin/dbt snapshot \
+            --defer \
+            --state target/ \
+            --select state:modified \
+            --target ci
+
+      - name: dbt seed (modified)
+        working-directory: lakehouse
+        env:
+          DBT_MATERIALIZATION: table
+        run: |
+          ../.venv/bin/dbt seed \
+            --defer \
+            --state target/ \
+            --select state:modified \
+            --target ci
+
+      - name: dbt run (modified + 1 downstream)
+        working-directory: lakehouse
+        env:
+          DBT_MATERIALIZATION: table
+        run: |
+          ../.venv/bin/dbt run \
+            --defer \
+            --state target/ \
+            --select state:modified+1 \
+            --target ci
+
+      - name: dbt test (modified models)
+        working-directory: lakehouse
+        env:
+          DBT_MATERIALIZATION: table
+        run: |
+          ../.venv/bin/dbt test \
+            --defer \
+            --state target/ \
+            --select state:modified \
+            --target ci
+
+      - name: Drop CI schema (cleanup)
+        if: always()
+        working-directory: lakehouse
+        run: |
+          ../.venv/bin/dbt run-operation drop_ci_catalog_schema --target ci
+
+  # ── Monte Carlo dry-run (if montecarlo/ changed) ───────────────────────────
+  montecarlo-validate:
+    runs-on: ubuntu-latest
+    needs: changed-files
+    if: needs.changed-files.outputs.montecarlo_changed == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID_DEV }}:role/gha-alo-lakehouse
+          aws-region: us-east-1
+
+      - name: Get Monte Carlo credentials
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id alo/montecarlo \
+            --query SecretString --output text)
+          echo "MCD_DEFAULT_API_ID=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['api_id'])")" >> $GITHUB_ENV
+          echo "::add-mask::$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['api_token'])")"
+          echo "MCD_DEFAULT_API_TOKEN=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['api_token'])")" >> $GITHUB_ENV
+
+      - name: Install montecarlodata
+        run: pip install montecarlodata==0.124.0 --break-system-packages
+
+      - name: Monte Carlo monitors dry-run
+        run: montecarlo monitors apply --dry-run

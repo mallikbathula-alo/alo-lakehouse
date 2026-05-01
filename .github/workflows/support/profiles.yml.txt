@@ -1,0 +1,52 @@
+lakehouse:
+  outputs:
+
+    # ── Local development (dev workspace, personal PAT) ────────────────────
+    local:
+      type: databricks
+      host: "${DBT_HOST}"
+      http_path: "${DBT_HTTP_PATH}"
+      token: "${DBT_TOKEN}"
+      catalog: alo_dev
+      schema: dbt_${USER:-local}
+      threads: 8
+      connect_timeout: 60
+      connect_retries: 3
+
+    # ── CI — ephemeral schema, dev workspace ──────────────────────────────
+    ci:
+      type: databricks
+      host: "${DBT_HOST}"
+      http_path: "${DBT_HTTP_PATH}"
+      token: "${DBT_TOKEN}"
+      catalog: alo_dev
+      schema: ci_${GITHUB_SHA:-unknown}
+      threads: 16
+      connect_timeout: 60
+      connect_retries: 3
+
+    # ── Dev deployment (dev workspace, service principal) ─────────────────
+    dev:
+      type: databricks
+      host: "${DBT_HOST}"
+      http_path: "${DBT_HTTP_PATH}"
+      token: "${DBT_TOKEN}"
+      catalog: alo_dev
+      schema: dbt_dev
+      threads: 16
+      connect_timeout: 60
+      connect_retries: 3
+
+    # ── Prod deployment (prod workspace, service principal) ───────────────
+    prod:
+      type: databricks
+      host: "${DBT_HOST}"
+      http_path: "${DBT_HTTP_PATH}"
+      token: "${DBT_TOKEN}"
+      catalog: alo_prod
+      schema: dbt_prod
+      threads: 32
+      connect_timeout: 60
+      connect_retries: 3
+
+  target: dev

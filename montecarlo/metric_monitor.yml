@@ -1,0 +1,83 @@
+montecarlo:
+  metric_monitors:
+
+    # ── Bronze layer freshness ────────────────────────────────────────────────
+    - name: br_shopify_us_orders_freshness
+      description: "Freshness monitor for Shopify US orders bronze table"
+      resource_id: 510e963f-a755-4a54-9c3d-5df5a2d91a21
+      monitors:
+        - type: freshness
+          asset:
+            database: alo_prod
+            schema: bronze
+            table: br_shopify_us_orders
+          schedule:
+            type: interval
+            interval_minutes: 720   # 12 hours
+
+    - name: br_shopify_us_orders_volume
+      description: "Row count anomaly detection for Shopify US orders"
+      resource_id: 510e963f-a755-4a54-9c3d-5df5a2d91a21
+      monitors:
+        - type: volume
+          asset:
+            database: alo_prod
+            schema: bronze
+            table: br_shopify_us_orders
+          schedule:
+            type: interval
+            interval_minutes: 720
+
+    # ── Silver layer freshness ────────────────────────────────────────────────
+    - name: silver_customers_freshness
+      description: "Freshness monitor for silver customers"
+      resource_id: 510e963f-a755-4a54-9c3d-5df5a2d91a21
+      monitors:
+        - type: freshness
+          asset:
+            database: alo_prod
+            schema: silver
+            table: silver_customers
+          schedule:
+            type: interval
+            interval_minutes: 720
+
+    # ── Gold layer freshness + schema ─────────────────────────────────────────
+    - name: gold_revenue_daily_freshness
+      description: "Freshness monitor for gold daily revenue model"
+      resource_id: 510e963f-a755-4a54-9c3d-5df5a2d91a21
+      monitors:
+        - type: freshness
+          asset:
+            database: alo_prod
+            schema: gold
+            table: gold_revenue_daily
+          schedule:
+            type: interval
+            interval_minutes: 1440   # 24 hours
+
+    - name: gold_revenue_daily_schema
+      description: "Schema change detection for gold daily revenue model"
+      resource_id: 510e963f-a755-4a54-9c3d-5df5a2d91a21
+      monitors:
+        - type: schema
+          asset:
+            database: alo_prod
+            schema: gold
+            table: gold_revenue_daily
+
+    # ── Numeric metric monitors ───────────────────────────────────────────────
+    - name: br_shopify_us_orders_revenue_anomaly
+      description: "Numeric anomaly on order revenue column"
+      resource_id: 510e963f-a755-4a54-9c3d-5df5a2d91a21
+      monitors:
+        - type: metric
+          metric: mean
+          asset:
+            database: alo_prod
+            schema: bronze
+            table: br_shopify_us_orders
+          field: total_price
+          schedule:
+            type: interval
+            interval_minutes: 1440

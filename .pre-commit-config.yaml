@@ -1,0 +1,128 @@
+repos:
+  # ── SQL Formatting ──────────────────────────────────────────────────────────
+  - repo: https://github.com/tconbeer/sqlfmt
+    rev: v0.23.2
+    hooks:
+      - id: sqlfmt
+        name: sql-format
+        language_version: python
+        files: '^lakehouse/(models/(1_bronze|2_silver_pre|3_silver|4_silver_post|5_gold|mgt|c360)|snapshots)/.*\.sql$'
+        args:
+          [
+            --exclude,
+            "lakehouse/target/**/*",
+            --exclude,
+            "lakehouse/dbt_packages/**/*",
+          ]
+        additional_dependencies: [".[jinjafmt]"]
+
+  # ── SQL Linting (SparkSQL / Databricks) ────────────────────────────────────
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 3.1.1
+    hooks:
+      - id: sqlfluff-fix
+        name: sqlfluff-fix
+        entry: sqlfluff fix --show-lint-violations --processes 0 --disable-progress-bar
+        language: python
+        types: [sql]
+        files: '^lakehouse/(models/(1_bronze|2_silver_pre|3_silver|4_silver_post|5_gold|mgt|c360)|snapshots)/.*\.sql$'
+        require_serial: true
+        additional_dependencies: ["dbt-databricks==1.9.4", "sqlfluff-templater-dbt"]
+
+  # ── Python Formatting ────────────────────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.8
+    hooks:
+      - id: ruff-format
+        name: python-format
+        types: [python]
+
+  # ── General file hygiene ─────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-yaml
+
+  # ── dbt model validation ─────────────────────────────────────────────────────
+  - repo: https://github.com/offbi/pre-commit-dbt
+    rev: v2.0.3
+    hooks:
+      - id: dbt-parse
+        files: '^lakehouse/models/(1_bronze|2_silver_pre|3_silver|4_silver_post|5_gold|mgt|c360)/.*\.sql$'
+
+      - id: check-model-has-properties-file
+        name: Check that all models are listed in a YAML file
+        files: '^lakehouse/models/(1_bronze|2_silver_pre|3_silver|4_silver_post|5_gold|mgt|c360)/.*\.sql$'
+
+      - id: check-script-ref-and-source
+        name: Check scripts have ref and source
+        files: '^lakehouse/models/(1_bronze|2_silver_pre|3_silver|4_silver_post|5_gold|mgt|c360)/.*\.sql$'
+
+      - id: check-model-tags
+        name: Check model tags
+        files: '^lakehouse/models/(1_bronze|2_silver_pre|3_silver|4_silver_post|5_gold|mgt|c360)/.*\.sql$'
+        args:
+          - "--tags"
+          - "bronze"
+          - "silver"
+          - "gold"
+          - "medallion-daily"
+          - "order-metrics"
+          - "databricks"
+          - "shopify-kinesis"
+          - "daily"
+          - "alshaya-franchisee"
+          - "ga"
+          - "ga3"
+          - "sfs"
+          - "legion"
+          - "marketing"
+          - "salesforce"
+          - "loyalty"
+          - "ecom-heap"
+          - "retail"
+          - "ga4"
+          - "plm"
+          - "crm"
+          - "currency_exchange"
+          - "rest"
+          - "graphql"
+          - "anaplan"
+          - "moves-thoughtspot-medallion"
+          - "zoho"
+          - "loop"
+          - "braze"
+          - "braze-current"
+          - "rpac"
+          - "franchise"
+          - "hex"
+          - "vibe"
+          - "cq-reports"
+          - "bq-funnel-events"
+          - "dq"
+          - "cq-reports-monthly"
+          - "admin"
+          - "asana"
+          - "invent"
+          - "bis"
+          - "ga4-awc"
+          - "inventory-360"
+          - "gladly"
+          - "oms"
+          - "sierra"
+          - "simplesat"
+          - "c360"
+          - "scd1"
+          - "scd2"
+          - "model"
+          - "fact"
+          - "consumption"
+          - "snapshot-dependent"
+          - "snapshot"
+          - "cq-reports-ap"
+          - "mgt"
+          - "finance"
+          - "customer"
+          - "--"
+          - ""

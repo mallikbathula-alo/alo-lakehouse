@@ -1,0 +1,3 @@
+warehouse/dbt_packages/
+warehouse/target/
+warehouse/macros/

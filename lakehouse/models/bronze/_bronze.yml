@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: br_shopify_us_orders
+    description: "Raw Shopify US orders from Kinesis ingestion."
+    config:
+      tags: ["bronze", "shopify-kinesis"]
+      materialized: incremental
+      incremental_strategy: merge
+      unique_key: order_id
+      cluster_by: ["created_at_date"]
+    columns:
+      - name: order_id
+        description: "Shopify order ID (primary key)"
+        tests:
+          - not_null
+          - unique
+
+  - name: br_test_python
+    description: "Example dbt Python model — products with tax column added via PySpark."
+    config:
+      tags: ["bronze"]
+      materialized: table
