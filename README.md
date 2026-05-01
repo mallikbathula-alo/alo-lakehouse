@@ -407,17 +407,13 @@ just ebf                                # Emergency bug fix
 
 ## Unity Catalog Setup
 
-One-time setup to create catalogs, schemas, and permissions (requires metastore admin):
+See [`databricks/permissions/README.md`](databricks/permissions/README.md) for the full catalog setup guide covering:
 
-```bash
-# Step 1 — account-level: create storage credential + external location
-./databricks/permissions/dev_account_setup.sh
-
-# Step 2 — workspace-level: create catalog, schemas, grants
-just run-sql databricks/permissions/dev_workspace_setup.sql
-```
-
-The dev catalog (`alo_dev`) is backed by `s3://is-dev-lakehouse` with each schema in its own subfolder.
+- Account group creation
+- Storage credential + external location (account-level CLI)
+- Catalog, schema, and grant setup (workspace-level SQL)
+- Permission model per group
+- Troubleshooting common errors
 
 ---
 
@@ -459,15 +455,21 @@ alo-lakehouse/
 │       ├── prod.yaml                   # Deploy to prod (on version tag)
 │       └── reusable-workflow.yaml      # Shared deployment logic
 ├── databricks/
-│   ├── workflows/                      # Databricks Workflow JSON definitions
-│   │   ├── daily_run.json
-│   │   └── full_refresh.json
-│   └── permissions/                    # Unity Catalog setup scripts
-│       ├── dev_account_setup.sh        # Storage credential + external location (CLI)
-│       ├── dev_workspace_setup.sql     # Catalog, schemas, grants
-│       ├── prod_account_setup.sh
-│       ├── prod_workspace_setup.sql
-│       └── groups_setup.sql            # Account-level group creation
+│   ├── clusters/                       # Cluster config JSON + setup steps (see README)
+│   │   ├── dev_cluster.json            # Interactive cluster for dev/PySpark
+│   │   ├── prod_cluster.json           # Job cluster for Databricks Workflows
+│   │   └── README.md                   # Steps to create/update clusters via CLI
+│   ├── workflows/                      # Databricks Workflow definitions (see README)
+│   │   ├── README.md                   # Setup + deploy steps
+│   │   ├── daily_run.json              # Daily 4 AM PT: bronze→silver→gold→tests
+│   │   └── full_refresh.json           # Sundays 1 AM PT: full rebuild of all layers
+│   └── permissions/                    # Unity Catalog setup (see README for full steps)
+│       ├── README.md                   # Full catalog setup guide
+│       ├── groups_setup.sql            # Account-level group creation
+│       ├── dev_account_setup.sh        # Dev storage credential + external location
+│       ├── dev_workspace_setup.sql     # Dev catalog, schemas, grants
+│       ├── prod_account_setup.sh       # Prod storage credential + external location
+│       └── prod_workspace_setup.sql    # Prod catalog, schemas, grants
 ├── jobs/
 │   └── alo-lakehouse.py                # Airflow DAG (MWAA)
 ├── montecarlo/                         # Data quality monitor definitions
