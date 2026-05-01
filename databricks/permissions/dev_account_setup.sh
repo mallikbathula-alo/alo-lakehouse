@@ -20,12 +20,12 @@
 set -euo pipefail
 
 echo "Creating storage credential for dev..."
-if databricks storage-credentials get alo_dev_storage_credential &>/dev/null; then
+if databricks storage-credentials get is-dev-aws-storage-credential &>/dev/null; then
   echo "  ✓ already exists, skipping"
 else
   databricks storage-credentials create \
     --json '{
-      "name": "alo_dev_storage_credential",
+      "name": "is-dev-aws-storage-credential",
       "aws_iam_role": {
         "role_arn": "arn:aws:iam::206390103201:role/is-dev-databricks-instance-role"
       },
@@ -41,7 +41,7 @@ else
     --json '{
       "name": "alo_dev_managed_location",
       "url": "s3://is-dev-lakehouse",
-      "credential_name": "alo_dev_storage_credential",
+      "credential_name": "is-dev-aws-storage-credential",
       "comment": "Managed location for alo_dev catalog"
     }'
 fi

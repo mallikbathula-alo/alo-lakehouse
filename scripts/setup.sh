@@ -1,13 +1,46 @@
 #!/usr/bin/env bash
 # ── alo-lakehouse local dev bootstrap ────────────────────────────────────────
-# Sets up uv venv, installs deps, fetches manifest, writes profiles.yml
+# Sets up all prerequisites, uv venv, dbt deps, PySpark venv, manifest, profiles.yml
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 LAKEHOUSE_DIR="$ROOT_DIR/lakehouse"
+PYSPARK_DIR="$ROOT_DIR/pyspark"
 
 echo "🏠 alo-lakehouse setup starting..."
+
+# ── 0. Check system prerequisites ─────────────────────────────────────────────
+MISSING=()
+
+if ! command -v brew &>/dev/null; then
+    echo "❌ Homebrew not found. Install from https://brew.sh then re-run."
+    exit 1
+fi
+
+if ! command -v aws &>/dev/null; then
+    MISSING+=("awscli")
+fi
+
+if ! command -v just &>/dev/null; then
+    MISSING+=("just")
+fi
+
+if ! command -v pre-commit &>/dev/null; then
+    MISSING+=("pre-commit")
+fi
+
+# Databricks CLI (v2 — the Go-based CLI, not the legacy Python one)
+if ! command -v databricks &>/dev/null; then
+    MISSING+=("databricks-cli")
+fi
+
+if [[ ${#MISSING[@]} -gt 0 ]]; then
+    echo "📦 Installing missing tools via Homebrew: ${MISSING[*]}"
+    brew install "${MISSING[@]}"
+fi
+
+echo "✅ System prerequisites ready."
 
 # ── 1. Install uv ─────────────────────────────────────────────────────────────
 if ! command -v uv &>/dev/null; then
@@ -15,12 +48,13 @@ if ! command -v uv &>/dev/null; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
     export PATH="$HOME/.local/bin:$PATH"
 fi
+echo "✅ uv $(uv --version) ready."
 
-# ── 2. Create virtual environment and install deps ────────────────────────────
-echo "🐍 Setting up Python environment..."
+# ── 2. Create dbt virtual environment and install deps ────────────────────────
+echo "🐍 Setting up dbt Python environment..."
 cd "$ROOT_DIR"
 uv sync
-echo "✅ Dependencies installed."
+echo "✅ dbt dependencies installed."
 
 # ── 3. Install dbt packages ───────────────────────────────────────────────────
 echo "📦 Installing dbt packages..."
@@ -28,7 +62,21 @@ cd "$LAKEHOUSE_DIR"
 "$ROOT_DIR/.venv/bin/dbt" deps
 echo "✅ dbt packages installed."
 
-# ── 4. Fetch latest manifest from S3 (for --defer support) ───────────────────
+# ── 4. Set up PySpark / Databricks Connect venv (isolated) ───────────────────
+# databricks-connect requires databricks-sdk>=0.29 which conflicts with
+# dbt-databricks==1.9.4 (pins ==0.17), so it lives in its own venv.
+echo "⚡ Setting up PySpark / Databricks Connect environment..."
+uv venv "$PYSPARK_DIR/.venv" --python 3.12
+uv pip install --python "$PYSPARK_DIR/.venv" -r "$PYSPARK_DIR/requirements.txt"
+echo "✅ PySpark venv ready at pyspark/.venv"
+
+# ── 5. Install pre-commit hooks ───────────────────────────────────────────────
+echo "🔗 Installing pre-commit hooks..."
+cd "$ROOT_DIR"
+pre-commit install
+echo "✅ Pre-commit hooks installed."
+
+# ── 6. Fetch latest manifest from S3 (for --defer support) ───────────────────
 echo "📥 Fetching dev manifest from S3..."
 mkdir -p "$LAKEHOUSE_DIR/target"
 if aws s3 cp s3://alo-dev-de-docs/manifest.json "$LAKEHOUSE_DIR/target/manifest.json" 2>/dev/null; then
@@ -37,7 +85,7 @@ else
     echo "⚠️  Could not fetch manifest (S3 access may not be configured yet). Skipping."
 fi
 
-# ── 5. Write local profiles.yml ───────────────────────────────────────────────
+# ── 7. Write local profiles.yml ───────────────────────────────────────────────
 DBT_PROFILES_DIR="$HOME/.dbt"
 mkdir -p "$DBT_PROFILES_DIR"
 
@@ -62,15 +110,42 @@ lakehouse:
 PROFILES
     echo "✅ profiles.yml created at $DBT_PROFILES_DIR/profiles.yml"
     echo ""
-    echo "⚙️  ACTION REQUIRED: Edit $DBT_PROFILES_DIR/profiles.yml with your Databricks workspace details."
-    echo "   - host:      your dev workspace URL"
-    echo "   - http_path: your SQL warehouse HTTP path"
-    echo "   - token:     your personal access token (PAT)"
+    echo "⚙️  ACTION REQUIRED: Edit $DBT_PROFILES_DIR/profiles.yml with your Databricks connection details."
+    echo "   - http_path: Databricks → SQL Warehouses → <warehouse> → Connection details → HTTP Path"
+    echo "   - token:     Databricks → Settings → Developer → Access tokens → Generate new token"
     echo "   - schema:    e.g. dbt_$(whoami)"
+fi
+
+# ── 8. Create .env for PySpark (if not present) ───────────────────────────────
+if [[ ! -f "$ROOT_DIR/.env" ]]; then
+    cat > "$ROOT_DIR/.env" << 'DOTENV'
+# PySpark / Databricks Connect — required for just pyspark-run / pyspark-shell
+# DATABRICKS_HOST and DATABRICKS_TOKEN are read from ~/.dbt/profiles.yml automatically.
+# Only DATABRICKS_CLUSTER_ID must be set here.
+#
+# Find your cluster ID: Databricks → Compute → <cluster> → Configuration → Tags → ClusterId
+# Or from the URL: .../clusters/<CLUSTER_ID>
+DATABRICKS_CLUSTER_ID=YOUR_CLUSTER_ID
+DOTENV
+    echo "✅ .env created — edit it and set DATABRICKS_CLUSTER_ID for PySpark."
+else
+    echo "ℹ️  .env already exists — skipping."
+fi
+
+# ── 9. Configure Databricks CLI ───────────────────────────────────────────────
+if ! databricks auth profiles 2>/dev/null | grep -q "DEFAULT\|dev\|prod"; then
+    echo ""
+    echo "⚙️  Databricks CLI not configured. Run the following to configure:"
+    echo "   databricks configure"
+    echo "   (Enter your workspace host and PAT token when prompted)"
+else
+    echo "✅ Databricks CLI already configured."
 fi
 
 echo ""
 echo "🎉 Setup complete! Next steps:"
-echo "   1. Edit ~/.dbt/profiles.yml with your Databricks connection details"
-echo "   2. Run: cd lakehouse && dbt debug"
-echo "   3. Run a model: just run-local <model_name>"
+echo "   1. Edit ~/.dbt/profiles.yml  — fill in http_path, token, schema"
+echo "   2. Edit .env                 — fill in DATABRICKS_CLUSTER_ID (for PySpark)"
+echo "   3. Run: cd lakehouse && dbt debug"
+echo "   4. Run a dbt model:    just run-local <model_name>"
+echo "   5. Run a PySpark script: just pyspark-run examples/explore_catalog.py"
