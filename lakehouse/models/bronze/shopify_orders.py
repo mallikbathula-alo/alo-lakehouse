@@ -7,7 +7,13 @@
 
 import os as _os
 import sys as _sys
-_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.realpath(__file__)), "schema"))
+# __file__ is not defined when Databricks runs the script via exec(); use inspect as fallback
+try:
+    _script_dir = _os.path.dirname(_os.path.realpath(__file__))
+except NameError:
+    import inspect as _inspect
+    _script_dir = _os.path.dirname(_os.path.realpath(_inspect.getfile(_inspect.currentframe())))
+_sys.path.insert(0, _os.path.join(_script_dir, "schema"))
 
 from shopify_orders_schema import SHOPIFY_ORDERS_SCHEMA  # noqa: F401
 
