@@ -25,8 +25,9 @@ from pyspark.sql.functions import (
 def _metafield(metafields_col, key):
     """Extract the jsonValue of a named metafield from the edges array."""
     from pyspark.sql.functions import expr
+    # get() returns NULL for out-of-bounds instead of throwing
     return expr(
-        f"filter({metafields_col}.edges, e -> e.node.key = '{key}')[0].node.jsonValue"
+        f"get(filter({metafields_col}.edges, e -> e.node.key = '{key}'), 0).node.jsonValue"
     ).cast("string")
 
 

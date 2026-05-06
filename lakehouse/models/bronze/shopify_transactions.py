@@ -17,7 +17,7 @@ from shopify_transactions_schema import SHOPIFY_TRANSACTIONS_SCHEMA  # noqa: F40
 
 from pyspark.sql.functions import (
     col, regexp_extract, lower, to_timestamp,
-    current_timestamp, explode_outer
+    current_timestamp, explode_outer, concat, lit
 )
 
 
@@ -72,7 +72,7 @@ def transform(df):
               col("fetched_at").cast("string").alias("fetched_at"),
 
               # ── Dedup key ─────────────────────────────────────
-              (d["id"].cast("string") + "_" + col("txn.id").cast("string")).alias("unique_key"),
+              concat(d["id"].cast("string"), lit("_"), col("txn.id").cast("string")).alias("unique_key"),
 
               # ── Audit ─────────────────────────────────────────
               current_timestamp().alias("_ingested_at"),

@@ -16,8 +16,8 @@ _sys.path.insert(0, _os.path.join(_script_dir, "schema"))
 from shopify_refunds_schema import SHOPIFY_REFUNDS_SCHEMA  # noqa: F401
 
 from pyspark.sql.functions import (
-    col, regexp_extract, lower, to_timestamp,
-    current_timestamp, explode_outer, size, coalesce, lit
+    col, regexp_extract, lower, to_timestamp, expr,
+    current_timestamp, explode_outer, size, coalesce, lit, concat
 )
 
 
@@ -60,29 +60,29 @@ def transform(df):
               # ── Refund line items summary ─────────────────────
               coalesce(size(col("ref.refundLineItems.edges")), lit(0)).alias("refund_line_item_count"),
 
-              # ── First / primary refund transaction ────────────
-              col("ref.transactions.edges")[0]["node"]["id"].cast("string")
+              # ── First / primary refund transaction (get() is NULL-safe for empty arrays) ──
+              expr("get(ref.transactions.edges, 0).node.id").cast("string")
                   .alias("transaction_gid"),
               regexp_extract(
-                  col("ref.transactions.edges")[0]["node"]["id"].cast("string"),
+                  expr("get(ref.transactions.edges, 0).node.id").cast("string"),
                   r"([0-9]+)$", 1
               ).cast("long").alias("transaction_id"),
-              lower(col("ref.transactions.edges")[0]["node"]["kind"]).alias("transaction_kind"),
-              lower(col("ref.transactions.edges")[0]["node"]["status"]).alias("transaction_status"),
-              col("ref.transactions.edges")[0]["node"]["gateway"].cast("string").alias("gateway"),
-              col("ref.transactions.edges")[0]["node"]["amountSet"]["shopMoney"]["amount"]
+              lower(expr("get(ref.transactions.edges, 0).node.kind")).alias("transaction_kind"),
+              lower(expr("get(ref.transactions.edges, 0).node.status")).alias("transaction_status"),
+              expr("get(ref.transactions.edges, 0).node.gateway").cast("string").alias("gateway"),
+              expr("get(ref.transactions.edges, 0).node.amountSet.shopMoney.amount")
                   .cast("decimal(12,2)").alias("amount"),
-              col("ref.transactions.edges")[0]["node"]["amountSet"]["shopMoney"]["currencyCode"]
+              expr("get(ref.transactions.edges, 0).node.amountSet.shopMoney.currencyCode")
                   .cast("string").alias("currency"),
-              col("ref.transactions.edges")[0]["node"]["amountSet"]["presentmentMoney"]["amount"]
+              expr("get(ref.transactions.edges, 0).node.amountSet.presentmentMoney.amount")
                   .cast("decimal(12,2)").alias("presentment_amount"),
-              col("ref.transactions.edges")[0]["node"]["amountSet"]["presentmentMoney"]["currencyCode"]
+              expr("get(ref.transactions.edges, 0).node.amountSet.presentmentMoney.currencyCode")
                   .cast("string").alias("presentment_currency"),
 
               # ── Envelope ──────────────────────────────────────
               col("platform"),
               col("fetched_at").cast("string").alias("fetched_at"),
-              (d["id"].cast("string") + "_" + col("ref.id").cast("string")).alias("unique_key"),
+              concat(d["id"].cast("string"), lit("_"), col("ref.id").cast("string")).alias("unique_key"),
 
               # ── Audit ─────────────────────────────────────────
               current_timestamp().alias("_ingested_at"),

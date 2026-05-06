@@ -18,7 +18,7 @@ from shopify_products_schema import SHOPIFY_PRODUCTS_SCHEMA  # noqa: F401
 
 from pyspark.sql.functions import (
     col, regexp_extract, lower, to_timestamp, array_join,
-    current_timestamp, explode_outer, expr
+    current_timestamp, explode_outer, expr, concat, lit
 )
 
 
@@ -94,7 +94,7 @@ def transform(df):
               # ── Envelope ──────────────────────────────────────
               col("platform"),
               col("fetched_at").cast("string").alias("fetched_at"),
-              (d["id"].cast("string") + "_" + col("v.id").cast("string")).alias("unique_key"),
+              concat(d["id"].cast("string"), lit("_"), col("v.id").cast("string")).alias("unique_key"),
 
               # ── Audit ─────────────────────────────────────────
               current_timestamp().alias("_ingested_at"),

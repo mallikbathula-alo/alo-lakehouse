@@ -16,9 +16,9 @@ _sys.path.insert(0, _os.path.join(_script_dir, "schema"))
 from shopify_fulfillments_schema import SHOPIFY_FULFILLMENTS_SCHEMA  # noqa: F401
 
 from pyspark.sql.functions import (
-    col, regexp_extract, lower, to_timestamp,
+    col, regexp_extract, lower, to_timestamp, expr,
     current_timestamp, explode_outer, coalesce, lit, size,
-    try_element_at
+    try_element_at, concat
 )
 
 
@@ -70,7 +70,7 @@ def transform(df):
                   .cast("string").alias("tracking_url"),
 
               # ── Latest event status ───────────────────────────
-              col("ful.events.edges")[0]["node"]["status"].cast("string")
+              expr("get(ful.events.edges, 0).node.status").cast("string")
                   .alias("latest_event_status"),
 
               # ── Line item count ───────────────────────────────
@@ -80,7 +80,7 @@ def transform(df):
               # ── Envelope ──────────────────────────────────────
               col("platform"),
               col("fetched_at").cast("string").alias("fetched_at"),
-              (d["id"].cast("string") + "_" + col("ful.id").cast("string")).alias("unique_key"),
+              concat(d["id"].cast("string"), lit("_"), col("ful.id").cast("string")).alias("unique_key"),
 
               # ── Audit ─────────────────────────────────────────
               current_timestamp().alias("_ingested_at"),
