@@ -1,0 +1,63 @@
+{
+  "name": "shopify-orders-ingest",
+  "description": "AutoLoader streaming ingest for Shopify GraphQL Orders API v2 → alo_dev.bronze.shopify_gq_orders_v2",
+  "tags": {
+    "project": "alo-lakehouse",
+    "layer": "bronze",
+    "source": "shopify-graphql-kinesis"
+  },
+  "schedule": {
+    "quartz_cron_expression": "0 0 * * * ?",
+    "timezone_id": "America/Los_Angeles",
+    "pause_status": "PAUSED"
+  },
+  "max_concurrent_runs": 1,
+  "timeout_seconds": 3600,
+  "email_notifications": {
+    "on_failure": ["mallik.bathula@aloyoga.com"],
+    "no_alert_for_skipped_runs": false
+  },
+  "tasks": [
+    {
+      "task_key": "ingest_shopify_orders",
+      "description": "Read Shopify orders from Firehose Volume via AutoLoader, apply transforms, write to Delta",
+      "spark_python_task": {
+        "python_file": "lakehouse/models/bronze/shopify_orders.py",
+        "source": "GIT"
+      },
+      "job_cluster_key": "ingest_cluster",
+      "libraries": [
+        {"pypi": {"package": "pyyaml"}}
+      ],
+      "run_if": "ALL_SUCCESS"
+    }
+  ],
+  "job_clusters": [
+    {
+      "job_cluster_key": "ingest_cluster",
+      "new_cluster": {
+        "spark_version": "15.4.x-scala2.12",
+        "node_type_id": "i3.xlarge",
+        "num_workers": 2,
+        "spark_conf": {
+          "spark.databricks.delta.preview.enabled": "true",
+          "spark.sql.shuffle.partitions": "200"
+        },
+        "spark_env_vars": {
+          "RUN_MODE": "streaming",
+          "SOURCE_CATALOG": "alo_dev"
+        },
+        "custom_tags": {
+          "project": "alo-lakehouse",
+          "team": "data-engineering",
+          "layer": "bronze"
+        }
+      }
+    }
+  ],
+  "git_source": {
+    "git_url": "https://github.com/mallikbathula-alo/alo-lakehouse",
+    "git_provider": "gitHub",
+    "git_branch": "main"
+  }
+}

@@ -1,21 +1,43 @@
 {
   "_comment": "Alo Lakehouse — Prod job cluster config (used by Databricks Workflows)",
-  "cluster_name": "alo-lakehouse-prod",
+  "cluster_name": "alo-lakehouse-prod-job-cluster",
   "spark_version": "15.4.x-scala2.12",
   "node_type_id": "i3.2xlarge",
-  "num_workers": 8,
+  "driver_node_type_id": "i3.xlarge",
+  "autoscale": {
+    "min_workers": 4,
+    "max_workers": 10
+  },
+  "enable_elastic_disk": true,
+  "aws_attributes": {
+    "instance_profile_arn": "arn:aws:iam::206390103201:instance-profile/databricks-ec2-role",
+    "availability": "SPOT_WITH_FALLBACK",
+    "spot_bid_price_percent": 100,
+    "first_on_demand": 1
+  },
   "spark_conf": {
+    "spark.sql.adaptive.enabled": "true",
+    "spark.sql.adaptive.coalescePartitions.enabled": "true",
+    "spark.sql.shuffle.partitions": "400",
+    "spark.executor.memoryOverhead": "2048",
+    "spark.driver.maxResultSize": "4g",
+    "spark.databricks.io.cache.enabled": "true",
+    "spark.databricks.io.cache.maxMetaDataCache": "0.1",
     "spark.databricks.delta.preview.enabled": "true",
     "spark.databricks.delta.optimizeWrite.enabled": "true",
-    "spark.databricks.delta.autoCompact.enabled": "true",
-    "spark.sql.shuffle.partitions": "400"
+    "spark.databricks.delta.autoCompact.enabled": "true"
+  },
+  "runtime_engine": "PHOTON",
+  "data_security_mode": "SINGLE_USER",
+  "autotermination_minutes": 60,
+  "cluster_log_conf": {
+    "dbfs": {
+      "destination": "dbfs:/cluster-logs/alo-lakehouse-prod"
+    }
   },
   "custom_tags": {
     "project": "alo-lakehouse",
     "env": "prod",
     "team": "data-engineering"
-  },
-  "data_security_mode": "SINGLE_USER",
-  "runtime_engine": "PHOTON",
-  "enable_elastic_disk": true
+  }
 }
