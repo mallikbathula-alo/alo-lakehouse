@@ -7,27 +7,30 @@
 
 import os as _os
 import sys as _sys
-# __file__ is not defined when Databricks runs the script via exec(); use inspect as fallback
 try:
     _script_dir = _os.path.dirname(_os.path.realpath(__file__))
 except NameError:
     import inspect as _inspect
     _script_dir = _os.path.dirname(_os.path.realpath(_inspect.getfile(_inspect.currentframe())))
-_sys.path.insert(0, _os.path.join(_script_dir, "schema"))
+for _p in [_script_dir, _os.path.join(_script_dir, "schema")]:
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
 
 from shopify_orders_schema import SHOPIFY_ORDERS_SCHEMA  # noqa: F401
+from ingest_utils import get_logger, get_spark, parse_ingest_args, build_paths, dedup, run_streaming, run_batch, preview_table  # noqa: E501
+
+from pyspark.sql.functions import (
+    col, regexp_extract, lower, when, split, regexp_replace,
+    array_join, try_element_at, to_timestamp, expr,
+    current_timestamp, coalesce, lit
+)
+
+log = get_logger("shopify_orders")
 
 
 ## ─────────────────────────────────────────────────────────────
 ## EQUIVALENT SPARK TRANSFORMATION (mirrors dbt unpack CTE)
 ## ─────────────────────────────────────────────────────────────
-
-from pyspark.sql.functions import (
-    col, regexp_extract, lower, when, split, regexp_replace,
-    array_join, element_at, try_element_at, to_timestamp, expr,
-    current_timestamp, coalesce, lit
-)
-
 
 def transform_unpack(df):
     """
@@ -176,15 +179,6 @@ def transform_final(df):
     Mirrors the outer SELECT with source_name_adj and is_gift_redemption.
     Applies dedup by unique_key (order_id), keeping latest updated_at.
     """
-    from pyspark.sql.functions import row_number
-    from pyspark.sql.window import Window
-
-    # Dedup — mirrors: row_number() over (partition by unique_key order by updated_at desc, loaded_at desc)
-    w = Window.partitionBy("unique_key").orderBy(
-        col("updated_at").desc(),
-        col("_ingested_at").desc()     # replaces loaded_at
-    )
-
     # source_name_adj
     sn = lower(col("source_name"))
     source_name_adj = (
@@ -227,10 +221,7 @@ def transform_final(df):
     total_line_items_price = (subtotal + (total_disc - shipping_cost_adj)).cast("decimal(10,2)")
 
     return (
-        df
-        .withColumn("_rank", row_number().over(w))
-        .filter(col("_rank") == 1)
-        .drop("_rank")
+        dedup(df, col("updated_at").desc(), col("_ingested_at").desc())
         .withColumn("source_name_adj",        source_name_adj)
         .withColumn("is_gift_redemption",     is_gift)
         .withColumn("shipping_cost_adj",      shipping_cost_adj)
@@ -240,181 +231,27 @@ def transform_final(df):
 
 
 ## ─────────────────────────────────────────────────────────────
-## RUN MODES
-## ─────────────────────────────────────────────────────────────
-
-def _run_streaming(spark, source_path, schema_loc, checkpoint_loc, output_table):
-    """
-    AutoLoader streaming mode — intended to run as a Databricks Job directly on
-    the cluster. NOT compatible with Databricks Connect (foreachBatch requires
-    the cluster to call back to local Python, which is not supported).
-
-    trigger=availableNow processes all new files since the last checkpoint then
-    stops, behaving like a scheduled incremental batch while retaining state.
-    """
-    print(f"\n── [streaming] AutoLoader source : {source_path} ──")
-
-    raw_stream = (
-        spark.readStream
-        .format("cloudFiles")
-        .option("cloudFiles.format",           "json")
-        .option("cloudFiles.schemaLocation",   schema_loc)
-        .option("cloudFiles.inferColumnTypes", "false")  # enforce provided schema
-        .option("recursiveFileLookup",         "true")   # traverse yyyy/mm/dd/hr
-        .schema(SHOPIFY_ORDERS_SCHEMA)
-        .load(source_path)
-    )
-
-    # transform_unpack is streaming-safe (pure column selects)
-    unpacked_stream = transform_unpack(raw_stream)
-
-    # transform_final uses row_number() — not allowed directly in streaming;
-    # foreachBatch executes it as a regular batch on each micro-batch
-    def process_batch(batch_df, batch_id):
-        row_count = batch_df.count()
-        print(f"   Batch {batch_id}: {row_count:,} unpacked rows")
-        if row_count == 0:
-            return
-        final_batch = transform_final(batch_df)
-        (
-            final_batch.write
-            .format("delta")
-            .mode("append")
-            .option("mergeSchema", "true")
-            .saveAsTable(output_table)
-        )
-        print(f"   Batch {batch_id}: {final_batch.count():,} rows written")
-
-    print(f"── [streaming] Writing to {output_table}  (trigger=availableNow) ──")
-    query = (
-        unpacked_stream.writeStream
-        .foreachBatch(process_batch)
-        .option("checkpointLocation", checkpoint_loc)
-        .trigger(availableNow=True)
-        .start()
-    )
-    query.awaitTermination()
-    print("── [streaming] Complete ──")
-
-
-def _run_batch(spark, source_path, output_table):
-    """
-    Batch mode — reads all JSON files directly via spark.read.
-    Use this for manual runs via Databricks Connect (just pyspark-run).
-    Overwrites the output table on each run (no checkpoint state).
-    """
-    print(f"\n── [batch] Reading JSON files from : {source_path} ──")
-
-    raw = (
-        spark.read
-        .format("json")
-        .option("recursiveFileLookup", "true")   # traverse yyyy/mm/dd/hr subfolders
-        .schema(SHOPIFY_ORDERS_SCHEMA)
-        .load(source_path)
-    )
-
-    print("── [batch] Applying transforms ──")
-    unpacked = transform_unpack(raw)
-    final    = transform_final(unpacked)
-
-    print(f"── [batch] Writing to {output_table} ──")
-    (
-        final.write
-        .format("delta")
-        .mode("overwrite")
-        .option("overwriteSchema", "true")
-        .saveAsTable(output_table)
-    )
-    print("── [batch] Write complete ──")
-
-
-## ─────────────────────────────────────────────────────────────
 ## MAIN
-##   batch mode (default):  just pyspark-run ../models/bronze/shopify_orders.py
-##   streaming mode:        RUN_MODE=streaming just pyspark-run ../models/bronze/shopify_orders.py
+##   batch mode (default):  just pyspark-run ../models/bronze/shopify_ingestions/shopify_orders.py
+##   streaming mode:        RUN_MODE=streaming just pyspark-run ...
 ## ─────────────────────────────────────────────────────────────
-
-def _get_spark_session():
-    """
-    Returns the appropriate SparkSession depending on where the code runs:
-
-    - On a Databricks cluster (Job/notebook): DATABRICKS_RUNTIME_VERSION is set
-      by the platform → use SparkSession.builder.getOrCreate(). No credentials
-      needed; the cluster's service principal handles Unity Catalog auth.
-
-    - Local machine (Databricks Connect): DATABRICKS_RUNTIME_VERSION is absent
-      → use utils/session.py which reads host/token from .env + profiles.yml
-      and connects remotely via gRPC.
-    """
-    import os
-    if os.environ.get("DATABRICKS_RUNTIME_VERSION"):
-        # Running on cluster — Spark is already available
-        from pyspark.sql import SparkSession
-        return SparkSession.builder.getOrCreate()
-    else:
-        # Running locally via Databricks Connect
-        import sys
-        _pyspark_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../../../pyspark")
-        sys.path.insert(0, os.path.abspath(_pyspark_dir))
-        from utils.session import get_spark
-        return get_spark()
-
 
 def main():
-    import argparse
-    import os
+    catalog, run_mode, source_date = parse_ingest_args("Shopify Orders ingest")
+    paths = build_paths(catalog, "orders", source_date)
 
-    # Args take priority over env vars; env vars take priority over defaults.
-    # This lets serverless jobs pass --run-mode / --source-catalog via
-    # spark_python_task.parameters while local runs still use env vars or defaults.
-    parser = argparse.ArgumentParser(description="Shopify Orders ingest")
-    parser.add_argument("--run-mode",       default=None, help="batch | streaming")
-    parser.add_argument("--source-catalog", default=None, help="Unity Catalog name")
-    parser.add_argument("--source-date",    default=None, help="yyyy/mm/dd/hh path suffix")
-    args, _ = parser.parse_known_args()
+    log.info("mode=%s  catalog=%s  source=%s", run_mode, catalog, paths["source_path"])
+    spark = get_spark(_script_dir)
+    log.info("SparkSession ready (Spark %s)", spark.version)
 
-    catalog      = args.source_catalog or os.environ.get("SOURCE_CATALOG", "alo_dev")
-    run_mode     = (args.run_mode      or os.environ.get("RUN_MODE",       "batch")).lower()
-    source_date  = args.source_date    or os.environ.get("SOURCE_DATE",    "")
-    preview_rows = int(os.environ.get("PREVIEW_ROWS", "5"))
-
-    # ── Paths ────────────────────────────────────────────────────
-    _base        = f"/Volumes/{catalog}/bronze/firehouse/kinesis/shopify/graphql/orders"
-    source_path  = f"{_base}/{source_date}" if source_date else _base
-    checkpoint_loc = f"/Volumes/{catalog}/bronze/_autoloader_checkpoints/shopify_graphql_orders"
-    schema_loc     = f"/Volumes/{catalog}/bronze/_autoloader_schema/shopify_graphql_orders"
-    output_table   = f"`{catalog}`.bronze.shopify_gq_orders_v2"
-
-    print(f"\n── Connecting to Databricks cluster ──")
-    spark = _get_spark_session()
-    print(f"   SparkSession ready  (Spark {spark.version})  mode={run_mode}")
+    transform_fn = lambda df: transform_final(transform_unpack(df))  # noqa: E731
 
     if run_mode == "streaming":
-        _run_streaming(spark, source_path, schema_loc, checkpoint_loc, output_table)
+        run_streaming(spark, paths, SHOPIFY_ORDERS_SCHEMA, transform_fn, log)
     else:
-        _run_batch(spark, source_path, output_table)
+        run_batch(spark, paths, SHOPIFY_ORDERS_SCHEMA, transform_fn, log)
 
-    # ── Preview results from the output table ────────────────────
-    final = spark.table(output_table)
-
-    print("\n── Output schema ──")
-    final.printSchema()
-
-    total = final.count()
-    print(f"\n── Total rows in {output_table}: {total:,} ──")
-
-    print(f"\n── Sample ({preview_rows} rows, latest first) ──")
-    (
-        final
-        .select(
-            "order_id", "order_number", "name", "email",
-            "financial_status", "fulfillment_status",
-            "total_price", "currency", "source_name_adj",
-            "created_at", "updated_at", "platform",
-        )
-        .orderBy(col("updated_at").desc())
-        .show(preview_rows, truncate=False)
-    )
+    preview_table(spark, paths["output_table"], n=5, logger=log)
 
 
 if __name__ == "__main__":
