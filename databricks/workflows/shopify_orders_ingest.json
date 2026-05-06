@@ -44,8 +44,9 @@
           "spark.sql.shuffle.partitions": "200"
         },
         "spark_env_vars": {
-          "RUN_MODE": "streaming",
-          "SOURCE_CATALOG": "alo_dev"
+          "RUN_MODE": "batch",
+          "SOURCE_CATALOG": "alo_dev",
+          "SOURCE_DATE": "2026/05/05/01"
         },
         "custom_tags": {
           "project": "alo-lakehouse",
