@@ -38,7 +38,7 @@ def get_client(env: str) -> WorkspaceClient:
 
 def deploy(env: str) -> None:
     client = get_client(env)
-    workflow_files = list(WORKFLOWS_DIR.glob("*.json"))
+    workflow_files = list(WORKFLOWS_DIR.glob("**/*.json"))
 
     if not workflow_files:
         log.warning("No workflow JSON files found in %s", WORKFLOWS_DIR)

@@ -1,6 +1,6 @@
 {
-  "name": "shopify-fulfillments-ingest",
-  "description": "AutoLoader streaming ingest for Shopify GraphQL Fulfillments API v2 → alo_dev.bronze.shopify_gq_fulfillments_v2",
+  "name": "shopify-orders-ingest",
+  "description": "AutoLoader streaming ingest for Shopify GraphQL Orders API v2 → alo_dev.bronze.shopify_gq_orders_v2",
   "tags": {
     "project": "alo-lakehouse",
     "layer": "bronze",
@@ -9,7 +9,7 @@
   "schedule": {
     "quartz_cron_expression": "0 0 * * * ?",
     "timezone_id": "America/Los_Angeles",
-    "pause_status": "PAUSED"
+    "pause_status": "UNPAUSED"
   },
   "max_concurrent_runs": 1,
   "timeout_seconds": 1800,
@@ -21,18 +21,18 @@
     {
       "environment_key": "ingest_env",
       "spec": {
-        "client": "2",
+        "client": "2",  
         "dependencies": ["pyyaml"]
       }
     }
   ],
   "tasks": [
     {
-      "task_key": "ingest_shopify_fulfillments",
-      "description": "Read Shopify fulfillments from Firehose Volume via AutoLoader, explode array, write to Delta",
+      "task_key": "ingest_shopify_orders",
+      "description": "Read Shopify orders from Firehose Volume via AutoLoader, apply transforms, write to Delta",
       "environment_key": "ingest_env",
       "spark_python_task": {
-        "python_file": "lakehouse/models/bronze/shopify_fulfillments.py",
+        "python_file": "lakehouse/models/bronze/shopify_ingestions/shopify_orders.py",
         "source": "GIT",
         "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev"]
       }

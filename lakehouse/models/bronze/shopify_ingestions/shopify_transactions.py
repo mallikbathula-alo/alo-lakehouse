@@ -1,7 +1,7 @@
 # ============================================================
 ## ─────────────────────────────────────────────────────────────
-#  Shopify Fulfillments GraphQL v2 → bronze.shopify_gq_fulfillments_v2
-#  Explodes the fulfillments array nested inside each order record.
+#  Shopify Transactions GraphQL v2 → bronze.shopify_gq_transactions_v2
+#  Explodes the transactions array nested inside each order record.
 ## ─────────────────────────────────────────────────────────────
 
 import os as _os
@@ -13,19 +13,18 @@ except NameError:
     _script_dir = _os.path.dirname(_os.path.realpath(_inspect.getfile(_inspect.currentframe())))
 _sys.path.insert(0, _os.path.join(_script_dir, "schema"))
 
-from shopify_fulfillments_schema import SHOPIFY_FULFILLMENTS_SCHEMA  # noqa: F401
+from shopify_transactions_schema import SHOPIFY_TRANSACTIONS_SCHEMA  # noqa: F401
 
 from pyspark.sql.functions import (
-    col, regexp_extract, lower, to_timestamp, expr,
-    current_timestamp, explode_outer, coalesce, lit, size,
-    try_element_at, concat
+    col, regexp_extract, lower, to_timestamp,
+    current_timestamp, explode_outer, concat, lit
 )
 
 
 def transform(df):
     """
-    Explode data.fulfillments array → one row per fulfillment.
-    Dedup by (order_id, fulfillment_id), keep latest updated_at.
+    Explode data.transactions array → one row per transaction.
+    Dedup by (order_id, transaction_id), keep latest by processed_at.
     """
     from pyspark.sql.functions import row_number
     from pyspark.sql.window import Window
@@ -33,54 +32,47 @@ def transform(df):
     d = col("data")
 
     exploded = (
-        df.withColumn("ful", explode_outer(d["fulfillments"]))
+        df.withColumn("txn", explode_outer(d["transactions"]))
           .select(
-              # ── Order ─────────────────────────────────────────
+              # ── Order (parent) ────────────────────────────────
               regexp_extract(d["id"].cast("string"), r"([0-9]+)$", 1)
                   .cast("long").alias("order_id"),
               to_timestamp(d["updatedAt"]).alias("order_updated_at"),
 
-              # ── Fulfillment ───────────────────────────────────
-              regexp_extract(col("ful.id").cast("string"), r"([0-9]+)$", 1)
-                  .cast("long").alias("fulfillment_id"),
-              col("ful.id").cast("string").alias("admin_graphql_api_id"),
-              col("ful.name").cast("string").alias("name"),
-              lower(col("ful.status")).alias("status"),
+              # ── Transaction ───────────────────────────────────
+              regexp_extract(col("txn.id").cast("string"), r"([0-9]+)$", 1)
+                  .cast("long").alias("transaction_id"),
 
-              to_timestamp(col("ful.createdAt")).alias("created_at"),
-              to_timestamp(col("ful.updatedAt")).alias("updated_at"),
-              to_timestamp(col("ful.inTransitAt")).alias("in_transit_at"),
-              to_timestamp(col("ful.estimatedDeliveryAt")).alias("estimated_delivery_at"),
-              to_timestamp(col("ful.deliveredAt")).alias("delivered_at"),
+              col("txn.id").cast("string").alias("admin_graphql_api_id"),
 
-              (col("ful.requiresShipping") == "true").alias("requires_shipping"),
+              lower(col("txn.kind")).alias("kind"),
+              lower(col("txn.status")).alias("status"),
+              col("txn.gateway").cast("string").alias("gateway"),
+              col("txn.paymentId").cast("string").alias("payment_id"),
+              col("txn.errorCode").cast("string").alias("error_code"),
+              col("txn.authorizationCode").cast("string").alias("authorization_code"),
+              col("txn.authorizationExpiresAt").cast("string").alias("authorization_expires_at"),
+              col("txn.receiptJson").cast("string").alias("receipt"),
 
-              # ── Location / service ────────────────────────────
-              regexp_extract(col("ful.location.id").cast("string"), r"([0-9]+)$", 1)
-                  .cast("long").alias("location_id"),
-              col("ful.service.handle").cast("string").alias("service_handle"),
-              col("ful.service.serviceName").cast("string").alias("service_name"),
+              (col("txn.test") == "true").alias("test"),
 
-              # ── Tracking (first entry) ─────────────────────────
-              try_element_at(col("ful.trackingInfo"), lit(1))["company"]
-                  .cast("string").alias("tracking_company"),
-              try_element_at(col("ful.trackingInfo"), lit(1))["number"]
-                  .cast("string").alias("tracking_number"),
-              try_element_at(col("ful.trackingInfo"), lit(1))["url"]
-                  .cast("string").alias("tracking_url"),
+              to_timestamp(col("txn.createdAt")).alias("created_at"),
+              to_timestamp(col("txn.processedAt")).alias("processed_at"),
 
-              # ── Latest event status ───────────────────────────
-              expr("get(ful.events.edges, 0).node.status").cast("string")
-                  .alias("latest_event_status"),
+              regexp_extract(col("txn.parentTransaction.id").cast("string"), r"([0-9]+)$", 1)
+                  .cast("long").alias("parent_transaction_id"),
 
-              # ── Line item count ───────────────────────────────
-              coalesce(size(col("ful.fulfillmentLineItems.edges")), lit(0))
-                  .alias("line_item_count"),
+              col("txn.amountSet.shopMoney.amount").cast("decimal(12,2)").alias("amount"),
+              col("txn.amountSet.shopMoney.currencyCode").cast("string").alias("currency"),
+              col("txn.amountSet.presentmentMoney.amount").cast("decimal(12,2)").alias("presentment_amount"),
+              col("txn.amountSet.presentmentMoney.currencyCode").cast("string").alias("presentment_currency"),
 
               # ── Envelope ──────────────────────────────────────
               col("platform"),
               col("fetched_at").cast("string").alias("fetched_at"),
-              concat(d["id"].cast("string"), lit("_"), col("ful.id").cast("string")).alias("unique_key"),
+
+              # ── Dedup key ─────────────────────────────────────
+              concat(d["id"].cast("string"), lit("_"), col("txn.id").cast("string")).alias("unique_key"),
 
               # ── Audit ─────────────────────────────────────────
               current_timestamp().alias("_ingested_at"),
@@ -91,7 +83,7 @@ def transform(df):
     w = (
         Window
         .partitionBy("unique_key")
-        .orderBy(col("updated_at").desc_nulls_last(), col("_ingested_at").desc())
+        .orderBy(col("processed_at").desc_nulls_last(), col("_ingested_at").desc())
     )
 
     return (
@@ -110,7 +102,7 @@ def _run_streaming(spark, source_path, schema_loc, checkpoint_loc, output_table)
         .option("cloudFiles.schemaLocation",   schema_loc)
         .option("cloudFiles.inferColumnTypes", "false")
         .option("recursiveFileLookup",         "true")
-        .schema(SHOPIFY_FULFILLMENTS_SCHEMA)
+        .schema(SHOPIFY_TRANSACTIONS_SCHEMA)
         .load(source_path)
     )
 
@@ -127,8 +119,9 @@ def _run_streaming(spark, source_path, schema_loc, checkpoint_loc, output_table)
             .option("mergeSchema", "true")
             .saveAsTable(output_table)
         )
-        print(f"   Batch {batch_id}: {final.count():,} rows written")
+        print(f"   Batch {batch_id}: {final.count():,} rows written to {output_table}")
 
+    print(f"── [streaming] Writing to {output_table} (trigger=availableNow) ──")
     query = (
         raw_stream.writeStream
         .foreachBatch(process_batch)
@@ -146,10 +139,11 @@ def _run_batch(spark, source_path, output_table):
         spark.read
         .format("json")
         .option("recursiveFileLookup", "true")
-        .schema(SHOPIFY_FULFILLMENTS_SCHEMA)
+        .schema(SHOPIFY_TRANSACTIONS_SCHEMA)
         .load(source_path)
     )
     final = transform(raw)
+    print(f"── [batch] Writing to {output_table} ──")
     (
         final.write
         .format("delta")
@@ -167,7 +161,7 @@ def _get_spark_session():
         return SparkSession.builder.getOrCreate()
     else:
         import sys
-        _pyspark_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../pyspark")
+        _pyspark_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../../../pyspark")
         sys.path.insert(0, os.path.abspath(_pyspark_dir))
         from utils.session import get_spark
         return get_spark()
@@ -177,7 +171,7 @@ def main():
     import argparse
     import os
 
-    parser = argparse.ArgumentParser(description="Shopify Fulfillments ingest")
+    parser = argparse.ArgumentParser(description="Shopify Transactions ingest")
     parser.add_argument("--run-mode",       default=None)
     parser.add_argument("--source-catalog", default=None)
     parser.add_argument("--source-date",    default=None)
@@ -187,13 +181,13 @@ def main():
     run_mode    = (args.run_mode      or os.environ.get("RUN_MODE",       "batch")).lower()
     source_date = args.source_date    or os.environ.get("SOURCE_DATE",    "")
 
-    _base          = f"/Volumes/{catalog}/bronze/firehouse/kinesis/shopify/graphql/fulfillments"
+    _base          = f"/Volumes/{catalog}/bronze/firehouse/kinesis/shopify/graphql/transactions"
     source_path    = f"{_base}/{source_date}" if source_date else _base
-    checkpoint_loc = f"/Volumes/{catalog}/bronze/_autoloader_checkpoints/shopify_graphql_fulfillments"
-    schema_loc     = f"/Volumes/{catalog}/bronze/_autoloader_schema/shopify_graphql_fulfillments"
-    output_table   = f"`{catalog}`.bronze.shopify_gq_fulfillments_v2"
+    checkpoint_loc = f"/Volumes/{catalog}/bronze/_autoloader_checkpoints/shopify_graphql_transactions"
+    schema_loc     = f"/Volumes/{catalog}/bronze/_autoloader_schema/shopify_graphql_transactions"
+    output_table   = f"`{catalog}`.bronze.shopify_gq_transactions_v2"
 
-    print(f"\n── Shopify Fulfillments ingest  mode={run_mode}  catalog={catalog} ──")
+    print(f"\n── Shopify Transactions ingest  mode={run_mode}  catalog={catalog} ──")
     spark = _get_spark_session()
     print(f"   SparkSession ready  (Spark {spark.version})")
 

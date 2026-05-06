@@ -181,7 +181,7 @@ def _get_spark_session():
         return SparkSession.builder.getOrCreate()
     else:
         import sys
-        _pyspark_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../pyspark")
+        _pyspark_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../../../pyspark")
         sys.path.insert(0, os.path.abspath(_pyspark_dir))
         from utils.session import get_spark
         return get_spark()
