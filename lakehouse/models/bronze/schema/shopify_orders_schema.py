@@ -131,10 +131,10 @@ SHOPIFY_ORDERS_SCHEMA = StructType([
 
         # Customer journey — FIX ❌: lastVisit was StringType, confirmed struct in data
         StructField("customerJourneySummary", StructType([
-            StructField("customerOrderIndex", IntegerType(), True),
+            StructField("customerOrderIndex", DoubleType(), True),
             StructField("daysToConversion",   DoubleType(),  True),
             StructField("momentsCount", StructType([
-                StructField("count",     IntegerType(), True),
+                StructField("count",     DoubleType(), True),
                 StructField("precision", StringType(),  True),
             ]), True),
             StructField("lastVisit", StructType([           # ← was StringType
