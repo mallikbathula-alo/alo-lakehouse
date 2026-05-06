@@ -379,7 +379,7 @@ def main():
     preview_rows = int(os.environ.get("PREVIEW_ROWS", "5"))
 
     # ── Paths ────────────────────────────────────────────────────
-    _base        = f"/Volumes/{catalog}/bronze/firehouse/kinesis/shopify/graphql/orders/2026/05/05"
+    _base        = f"/Volumes/{catalog}/bronze/firehouse/kinesis/shopify/graphql/orders"
     source_path  = f"{_base}/{source_date}" if source_date else _base
     checkpoint_loc = f"/Volumes/{catalog}/bronze/_autoloader_checkpoints/shopify_graphql_orders"
     schema_loc     = f"/Volumes/{catalog}/bronze/_autoloader_schema/shopify_graphql_orders"
