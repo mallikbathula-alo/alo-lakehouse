@@ -86,9 +86,9 @@ def transform(df):
               col("v.inventoryItem.measurement.weight.unit").cast("string").alias("weight_unit"),
 
               # ── Selected options (first two cover most products) ──
-              expr("filter(v.selectedOptions, o -> o.name = 'Color')[0].value")
+              expr("get(filter(v.selectedOptions, o -> o.name = 'Color'), 0).value")
                   .cast("string").alias("option_color"),
-              expr("filter(v.selectedOptions, o -> o.name = 'Size')[0].value")
+              expr("get(filter(v.selectedOptions, o -> o.name = 'Size'), 0).value")
                   .cast("string").alias("option_size"),
 
               # ── Envelope ──────────────────────────────────────
