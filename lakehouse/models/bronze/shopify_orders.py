@@ -112,7 +112,7 @@ def transform_unpack(df):
         d["currentShippingPriceSet"]["shopMoney"]["amount"].cast("decimal(8,2)").alias("current_shipping_cost"),
         d["currentSubtotalPriceSet"]["shopMoney"]["amount"].cast("decimal(10,2)").alias("current_subtotal_price"),
         d["currentTotalPriceSet"]["shopMoney"]["amount"].cast("decimal(10,2)").alias("current_total_price"),
-        d["currentTotalTaxSet"]["shopMoney"]["amount"].cast("int").alias("current_total_tax"),
+        d["currentTotalTaxSet"]["shopMoney"]["amount"].cast("decimal(8,2)").alias("current_total_tax"),
         d["currentTotalDiscountsSet"]["shopMoney"]["amount"].cast("decimal(10,2)").alias("current_total_discounts"),
         d["totalOutstandingSet"]["shopMoney"]["amount"].cast("string").alias("total_outstanding"),
         d["totalTipReceivedSet"]["shopMoney"]["amount"].cast("decimal(8,2)").alias("total_tip_received"),
