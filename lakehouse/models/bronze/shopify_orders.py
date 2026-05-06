@@ -24,7 +24,7 @@ from shopify_orders_schema import SHOPIFY_ORDERS_SCHEMA  # noqa: F401
 
 from pyspark.sql.functions import (
     col, regexp_extract, lower, when, split, regexp_replace,
-    array_join, element_at, to_timestamp, expr,
+    array_join, element_at, try_element_at, to_timestamp, expr,
     current_timestamp, coalesce, lit
 )
 
@@ -130,7 +130,7 @@ def transform_unpack(df):
             .cast("string").alias("user_id"),
 
         # ── Payment ───────────────────────────────────────────
-        element_at(d["paymentGatewayNames"], 1).cast("string").alias("gateway"),
+        try_element_at(d["paymentGatewayNames"], lit(1)).cast("string").alias("gateway"),
         d["paymentGatewayNames"].alias("payment_gateway_names"),
         d["poNumber"].cast("string").alias("po_number"),
         d["discountCodes"].alias("discount_codes"),
