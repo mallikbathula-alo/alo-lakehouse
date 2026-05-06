@@ -33,7 +33,8 @@
       "environment_key": "ingest_env",
       "spark_python_task": {
         "python_file": "lakehouse/models/bronze/shopify_orders.py",
-        "source": "GIT"
+        "source": "GIT",
+        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev"]
       }
     }
   ],

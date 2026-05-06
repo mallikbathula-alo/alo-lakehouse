@@ -361,16 +361,22 @@ def _get_spark_session():
 
 
 def main():
+    import argparse
     import os
 
-    catalog      = os.environ.get("SOURCE_CATALOG", "alo_dev")
+    # Args take priority over env vars; env vars take priority over defaults.
+    # This lets serverless jobs pass --run-mode / --source-catalog via
+    # spark_python_task.parameters while local runs still use env vars or defaults.
+    parser = argparse.ArgumentParser(description="Shopify Orders ingest")
+    parser.add_argument("--run-mode",       default=None, help="batch | streaming")
+    parser.add_argument("--source-catalog", default=None, help="Unity Catalog name")
+    parser.add_argument("--source-date",    default=None, help="yyyy/mm/dd/hh path suffix")
+    args, _ = parser.parse_known_args()
+
+    catalog      = args.source_catalog or os.environ.get("SOURCE_CATALOG", "alo_dev")
+    run_mode     = (args.run_mode      or os.environ.get("RUN_MODE",       "batch")).lower()
+    source_date  = args.source_date    or os.environ.get("SOURCE_DATE",    "")
     preview_rows = int(os.environ.get("PREVIEW_ROWS", "5"))
-    # RUN_MODE=streaming → AutoLoader readStream (Databricks Job on cluster)
-    # RUN_MODE=batch     → spark.read.json (Databricks Connect / manual run)
-    run_mode     = os.environ.get("RUN_MODE", "batch").lower()
-    # SOURCE_DATE: optional yyyy/mm/dd/hh suffix to limit batch reads to one hour
-    # e.g. SOURCE_DATE=2026/05/05/23 reads only that hour's files
-    source_date  = os.environ.get("SOURCE_DATE", "")
 
     # ── Paths ────────────────────────────────────────────────────
     _base        = f"/Volumes/{catalog}/bronze/firehouse/kinesis/shopify/graphql/orders/2026/05/05"
