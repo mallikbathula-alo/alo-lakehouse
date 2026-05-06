@@ -31,7 +31,7 @@
   "tasks": [
     {
       "task_key": "orders",
-      "description": "Shopify Orders → shopify_gq_orders_v2",
+      "description": "Shopify Orders → shopify_gq_orders",
       "environment_key": "ingest_env",
       "spark_python_task": {
         "python_file": "lakehouse/models/bronze/shopify_ingestions/shopify_orders.py",
@@ -41,7 +41,7 @@
     },
     {
       "task_key": "customers",
-      "description": "Shopify Customers → shopify_gq_customers_v2",
+      "description": "Shopify Customers → shopify_gq_customers",
       "environment_key": "ingest_env",
       "spark_python_task": {
         "python_file": "lakehouse/models/bronze/shopify_ingestions/shopify_customers.py",
@@ -51,7 +51,7 @@
     },
     {
       "task_key": "products",
-      "description": "Shopify Products → shopify_gq_products_v2",
+      "description": "Shopify Products → shopify_gq_products",
       "environment_key": "ingest_env",
       "spark_python_task": {
         "python_file": "lakehouse/models/bronze/shopify_ingestions/shopify_products.py",
@@ -61,7 +61,7 @@
     },
     {
       "task_key": "transactions",
-      "description": "Shopify Transactions → shopify_gq_transactions_v2",
+      "description": "Shopify Transactions → shopify_gq_transactions",
       "depends_on": [{"task_key": "orders"}],
       "environment_key": "ingest_env",
       "spark_python_task": {
@@ -72,7 +72,7 @@
     },
     {
       "task_key": "refunds",
-      "description": "Shopify Refunds → shopify_gq_refunds_v2",
+      "description": "Shopify Refunds → shopify_gq_refunds",
       "depends_on": [{"task_key": "orders"}],
       "environment_key": "ingest_env",
       "spark_python_task": {
@@ -83,7 +83,7 @@
     },
     {
       "task_key": "lineitems",
-      "description": "Shopify Line Items → shopify_gq_lineitems_v2",
+      "description": "Shopify Line Items → shopify_gq_lineitems",
       "depends_on": [{"task_key": "orders"}],
       "environment_key": "ingest_env",
       "spark_python_task": {
@@ -94,7 +94,7 @@
     },
     {
       "task_key": "fulfillments",
-      "description": "Shopify Fulfillments → shopify_gq_fulfillments_v2",
+      "description": "Shopify Fulfillments → shopify_gq_fulfillments",
       "depends_on": [{"task_key": "orders"}],
       "environment_key": "ingest_env",
       "spark_python_task": {

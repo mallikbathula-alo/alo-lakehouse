@@ -141,7 +141,7 @@ def build_paths(catalog: str, dataset: str, source_date: str = "") -> dict:
         "source_path":    f"{base}/{source_date}" if source_date else base,
         "checkpoint_loc": f"/Volumes/{catalog}/bronze/_autoloader_checkpoints/shopify_graphql_{table_name}",
         "schema_loc":     f"/Volumes/{catalog}/bronze/_autoloader_schema/shopify_graphql_{table_name}",
-        "output_table":   f"`{catalog}`.bronze.shopify_gq_{table_name}_v2",
+        "output_table":   f"`{catalog}`.bronze.shopify_gq_{table_name}",
     }
 
 
