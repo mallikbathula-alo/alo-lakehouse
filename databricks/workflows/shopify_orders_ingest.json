@@ -12,50 +12,34 @@
     "pause_status": "PAUSED"
   },
   "max_concurrent_runs": 1,
-  "timeout_seconds": 3600,
+  "timeout_seconds": 1800,
   "email_notifications": {
     "on_failure": ["mallik.bathula@aloyoga.com"],
     "no_alert_for_skipped_runs": false
   },
+  "environments": [
+    {
+      "environment_key": "ingest_env",
+      "spec": {
+        "client": "2",  
+        "dependencies": ["pyyaml"]
+      }
+    }
+  ],
   "tasks": [
     {
       "task_key": "ingest_shopify_orders",
       "description": "Read Shopify orders from Firehose Volume via AutoLoader, apply transforms, write to Delta",
+      "environment_key": "ingest_env",
       "spark_python_task": {
         "python_file": "lakehouse/models/bronze/shopify_orders.py",
         "source": "GIT"
-      },
-      "job_cluster_key": "ingest_cluster",
-      "libraries": [
-        {"pypi": {"package": "pyyaml"}}
-      ],
-      "run_if": "ALL_SUCCESS"
-    }
-  ],
-  "job_clusters": [
-    {
-      "job_cluster_key": "ingest_cluster",
-      "new_cluster": {
-        "spark_version": "15.4.x-scala2.12",
-        "node_type_id": "i3.xlarge",
-        "num_workers": 2,
-        "spark_conf": {
-          "spark.databricks.delta.preview.enabled": "true",
-          "spark.sql.shuffle.partitions": "200"
-        },
-        "spark_env_vars": {
-          "RUN_MODE": "batch",
-          "SOURCE_CATALOG": "alo_dev",
-          "SOURCE_DATE": "2026/05/05/01"
-        },
-        "custom_tags": {
-          "project": "alo-lakehouse",
-          "team": "data-engineering",
-          "layer": "bronze"
-        }
       }
     }
   ],
+  "run_as": {
+    "user_name": "data.engineering@aloyoga.com"
+  },
   "git_source": {
     "git_url": "https://github.com/mallikbathula-alo/alo-lakehouse",
     "git_provider": "gitHub",

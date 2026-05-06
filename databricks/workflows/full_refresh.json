@@ -16,54 +16,76 @@
     "on_failure": ["data-engineering@aloyoga.com"],
     "on_start": ["data-engineering@aloyoga.com"]
   },
+  "run_as": {
+    "user_name": "data.engineering@aloyoga.com"
+  },
+  "git_source": {
+    "git_url": "https://github.com/mallikbathula-alo/alo-lakehouse",
+    "git_provider": "gitHub",
+    "git_branch": "main"
+  },
+  "environments": [
+    {
+      "environment_key": "dbt_env",
+      "spec": {
+        "client": "1",
+        "dependencies": ["dbt-databricks==1.9.4"]
+      }
+    }
+  ],
   "tasks": [
     {
       "task_key": "full_refresh_bronze",
       "description": "Full refresh all bronze models",
-      "job_cluster_key": "full_refresh_cluster",
+      "environment_key": "dbt_env",
+      "dbt_task": {
+        "commands": ["dbt run --full-refresh --select path:models/1_bronze/ --target dev"],
+        "project_directory": "lakehouse",
+        "warehouse_id": "5bbd12e17dcc2628",
+        "source": "GIT"
+      },
       "run_if": "ALL_SUCCESS"
     },
     {
       "task_key": "full_refresh_silver",
       "description": "Full refresh all silver models",
       "depends_on": [{"task_key": "full_refresh_bronze"}],
-      "job_cluster_key": "full_refresh_cluster",
+      "environment_key": "dbt_env",
+      "dbt_task": {
+        "commands": [
+          "dbt run --full-refresh --select path:models/2_silver_pre/ path:models/3_silver/ path:models/4_silver_post/ --target dev"
+        ],
+        "project_directory": "lakehouse",
+        "warehouse_id": "5bbd12e17dcc2628",
+        "source": "GIT"
+      },
       "run_if": "ALL_SUCCESS"
     },
     {
       "task_key": "full_refresh_gold",
       "description": "Full refresh all gold models",
       "depends_on": [{"task_key": "full_refresh_silver"}],
-      "job_cluster_key": "full_refresh_cluster",
+      "environment_key": "dbt_env",
+      "dbt_task": {
+        "commands": ["dbt run --full-refresh --select path:models/5_gold/ --target dev"],
+        "project_directory": "lakehouse",
+        "warehouse_id": "5bbd12e17dcc2628",
+        "source": "GIT"
+      },
       "run_if": "ALL_SUCCESS"
     },
     {
       "task_key": "dbt_tests_post_refresh",
       "description": "Full test suite after refresh",
       "depends_on": [{"task_key": "full_refresh_gold"}],
-      "job_cluster_key": "full_refresh_cluster",
+      "environment_key": "dbt_env",
+      "dbt_task": {
+        "commands": ["dbt test --target dev"],
+        "project_directory": "lakehouse",
+        "warehouse_id": "5bbd12e17dcc2628",
+        "source": "GIT"
+      },
       "run_if": "ALL_SUCCESS"
-    }
-  ],
-  "job_clusters": [
-    {
-      "job_cluster_key": "full_refresh_cluster",
-      "new_cluster": {
-        "spark_version": "15.4.x-scala2.12",
-        "node_type_id": "i3.2xlarge",
-        "num_workers": 8,
-        "spark_conf": {
-          "spark.databricks.delta.preview.enabled": "true",
-          "spark.sql.shuffle.partitions": "400"
-        },
-        "spark_env_vars": {
-          "DBT_MATERIALIZATION": "table"
-        },
-        "custom_tags": {
-          "project": "alo-lakehouse",
-          "job-type": "full-refresh"
-        }
-      }
     }
   ]
 }

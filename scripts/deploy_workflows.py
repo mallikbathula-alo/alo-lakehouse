@@ -50,6 +50,7 @@ def deploy(env: str) -> None:
         if job.settings and job.settings.name:
             existing[job.settings.name] = job.job_id
 
+    errors = []
     for wf_file in workflow_files:
         definition = json.loads(wf_file.read_text())
 
@@ -57,15 +58,26 @@ def deploy(env: str) -> None:
         definition.setdefault("tags", {})["env"] = env
         job_name = definition.get("name", wf_file.stem)
 
-        if job_name in existing:
-            job_id = existing[job_name]
-            log.info("Updating existing job '%s' (id=%s)...", job_name, job_id)
-            client.jobs.reset(job_id=job_id, new_settings=JobSettings.from_dict(definition))
-            log.info("✅ Updated: %s", job_name)
-        else:
-            log.info("Creating new job '%s'...", job_name)
-            created = client.jobs.create(**definition)
-            log.info("✅ Created: %s (id=%s)", job_name, created.job_id)
+        try:
+            if job_name in existing:
+                job_id = existing[job_name]
+                log.info("Updating existing job '%s' (id=%s)...", job_name, job_id)
+                client.jobs.reset(job_id=job_id, new_settings=JobSettings.from_dict(definition))
+                log.info("✅ Updated: %s", job_name)
+            else:
+                log.info("Creating new job '%s'...", job_name)
+                settings = JobSettings.from_dict(definition)
+                created = client.jobs.create(
+                    **{k: v for k, v in vars(settings).items() if v is not None}
+                )
+                log.info("✅ Created: %s (id=%s)", job_name, created.job_id)
+        except Exception as exc:
+            log.error("❌ Failed to deploy '%s': %s", job_name, exc)
+            errors.append((job_name, exc))
+
+    if errors:
+        failed = ", ".join(name for name, _ in errors)
+        raise SystemExit(f"Deployment failed for: {failed}")
 
 
 def main() -> None:

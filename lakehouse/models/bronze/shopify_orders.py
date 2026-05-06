@@ -373,7 +373,7 @@ def main():
     source_date  = os.environ.get("SOURCE_DATE", "")
 
     # ── Paths ────────────────────────────────────────────────────
-    _base        = f"/Volumes/{catalog}/bronze/firehouse/kinesis/shopify/graphql/orders"
+    _base        = f"/Volumes/{catalog}/bronze/firehouse/kinesis/shopify/graphql/orders/2026/05/05"
     source_path  = f"{_base}/{source_date}" if source_date else _base
     checkpoint_loc = f"/Volumes/{catalog}/bronze/_autoloader_checkpoints/shopify_graphql_orders"
     schema_loc     = f"/Volumes/{catalog}/bronze/_autoloader_schema/shopify_graphql_orders"

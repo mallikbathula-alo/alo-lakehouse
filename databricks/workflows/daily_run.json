@@ -25,63 +25,76 @@
     "on_failure": ["data-engineering@aloyoga.com"],
     "no_alert_for_skipped_runs": false
   },
+  "run_as": {
+    "user_name": "data.engineering@aloyoga.com"
+  },
+  "git_source": {
+    "git_url": "https://github.com/mallikbathula-alo/alo-lakehouse",
+    "git_provider": "gitHub",
+    "git_branch": "main"
+  },
+  "environments": [
+    {
+      "environment_key": "dbt_env",
+      "spec": {
+        "client": "1",
+        "dependencies": ["dbt-databricks==1.9.4"]
+      }
+    }
+  ],
   "tasks": [
     {
       "task_key": "bronze",
       "description": "Run all bronze ingestion models",
-      "job_cluster_key": "dbt_cluster",
-      "python_wheel_task": {
-        "package_name": "dbt_databricks",
-        "entry_point": "dbt"
+      "environment_key": "dbt_env",
+      "dbt_task": {
+        "commands": ["dbt run --select path:models/1_bronze/ --target dev"],
+        "project_directory": "lakehouse",
+        "warehouse_id": "5bbd12e17dcc2628",
+        "source": "GIT"
       },
-      "libraries": [
-        {"pypi": {"package": "dbt-databricks==1.9.4"}}
-      ],
-      "spark_python_task": null,
-      "notebook_task": null,
       "run_if": "ALL_SUCCESS"
     },
     {
       "task_key": "silver",
       "description": "Run all silver transformation models",
       "depends_on": [{"task_key": "bronze"}],
-      "job_cluster_key": "dbt_cluster",
+      "environment_key": "dbt_env",
+      "dbt_task": {
+        "commands": [
+          "dbt run --select path:models/2_silver_pre/ path:models/3_silver/ path:models/4_silver_post/ --target dev"
+        ],
+        "project_directory": "lakehouse",
+        "warehouse_id": "5bbd12e17dcc2628",
+        "source": "GIT"
+      },
       "run_if": "ALL_SUCCESS"
     },
     {
       "task_key": "gold",
       "description": "Run all gold analytics models",
       "depends_on": [{"task_key": "silver"}],
-      "job_cluster_key": "dbt_cluster",
+      "environment_key": "dbt_env",
+      "dbt_task": {
+        "commands": ["dbt run --select path:models/5_gold/ --target dev"],
+        "project_directory": "lakehouse",
+        "warehouse_id": "5bbd12e17dcc2628",
+        "source": "GIT"
+      },
       "run_if": "ALL_SUCCESS"
     },
     {
       "task_key": "dbt_tests",
       "description": "Run dbt tests across all layers",
       "depends_on": [{"task_key": "gold"}],
-      "job_cluster_key": "dbt_cluster",
+      "environment_key": "dbt_env",
+      "dbt_task": {
+        "commands": ["dbt test --target dev"],
+        "project_directory": "lakehouse",
+        "warehouse_id": "5bbd12e17dcc2628",
+        "source": "GIT"
+      },
       "run_if": "ALL_SUCCESS"
-    }
-  ],
-  "job_clusters": [
-    {
-      "job_cluster_key": "dbt_cluster",
-      "new_cluster": {
-        "spark_version": "15.4.x-scala2.12",
-        "node_type_id": "i3.xlarge",
-        "num_workers": 4,
-        "spark_conf": {
-          "spark.databricks.delta.preview.enabled": "true",
-          "spark.sql.shuffle.partitions": "200"
-        },
-        "spark_env_vars": {
-          "DBT_MATERIALIZATION": "table"
-        },
-        "custom_tags": {
-          "project": "alo-lakehouse",
-          "team": "data-engineering"
-        }
-      }
     }
   ]
 }
