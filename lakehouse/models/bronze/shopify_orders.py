@@ -328,14 +328,34 @@ def _run_batch(spark, source_path, output_table):
 ##   streaming mode:        RUN_MODE=streaming just pyspark-run ../models/bronze/shopify_orders.py
 ## ─────────────────────────────────────────────────────────────
 
+def _get_spark_session():
+    """
+    Returns the appropriate SparkSession depending on where the code runs:
+
+    - On a Databricks cluster (Job/notebook): DATABRICKS_RUNTIME_VERSION is set
+      by the platform → use SparkSession.builder.getOrCreate(). No credentials
+      needed; the cluster's service principal handles Unity Catalog auth.
+
+    - Local machine (Databricks Connect): DATABRICKS_RUNTIME_VERSION is absent
+      → use utils/session.py which reads host/token from .env + profiles.yml
+      and connects remotely via gRPC.
+    """
+    import os
+    if os.environ.get("DATABRICKS_RUNTIME_VERSION"):
+        # Running on cluster — Spark is already available
+        from pyspark.sql import SparkSession
+        return SparkSession.builder.getOrCreate()
+    else:
+        # Running locally via Databricks Connect
+        import sys
+        _pyspark_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../pyspark")
+        sys.path.insert(0, os.path.abspath(_pyspark_dir))
+        from utils.session import get_spark
+        return get_spark()
+
+
 def main():
     import os
-    import sys
-
-    # resolve utils.session regardless of working directory
-    _pyspark_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../pyspark")
-    sys.path.insert(0, os.path.abspath(_pyspark_dir))
-    from utils.session import get_spark
 
     catalog      = os.environ.get("SOURCE_CATALOG", "alo_dev")
     preview_rows = int(os.environ.get("PREVIEW_ROWS", "5"))
@@ -354,7 +374,7 @@ def main():
     output_table   = f"`{catalog}`.bronze.shopify_gq_orders_v2"
 
     print(f"\n── Connecting to Databricks cluster ──")
-    spark = get_spark()
+    spark = _get_spark_session()
     print(f"   SparkSession ready  (Spark {spark.version})  mode={run_mode}")
 
     if run_mode == "streaming":
