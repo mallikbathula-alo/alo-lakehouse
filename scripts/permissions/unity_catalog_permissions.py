@@ -44,7 +44,6 @@ CATALOG_PERMISSIONS: dict[str, dict] = {
             "fivetran":         ["USE SCHEMA", "SELECT"],
             "thoughtspot":      ["USE SCHEMA", "SELECT"],
             "hex_report":       ["USE SCHEMA", "SELECT"],
-            "monte_carlo":      ["USE SCHEMA", "SELECT"],
         },
         "bronze": {
             "braze": ["USE SCHEMA", "SELECT"],
@@ -59,7 +58,6 @@ CATALOG_PERMISSIONS: dict[str, dict] = {
             "fivetran":         ["USE SCHEMA", "SELECT"],
             "thoughtspot":      ["USE SCHEMA", "SELECT"],
             "hex_report":       ["USE SCHEMA", "SELECT"],
-            "monte_carlo":      ["USE SCHEMA", "SELECT"],
         },
         "bronze": {
             "braze": ["USE SCHEMA", "SELECT"],
@@ -76,7 +74,6 @@ CATALOG_LEVEL_PERMISSIONS: dict[str, dict] = {
         "fivetran":         ["USE CATALOG"],
         "thoughtspot":      ["USE CATALOG"],
         "hex_report":       ["USE CATALOG"],
-        "monte_carlo":      ["USE CATALOG"],
         "braze":            ["USE CATALOG"],
     },
     "alo_prod": {
@@ -87,7 +84,6 @@ CATALOG_LEVEL_PERMISSIONS: dict[str, dict] = {
         "fivetran":         ["USE CATALOG"],  #"CREATE SCHEMA"],
         "thoughtspot":      ["USE CATALOG"],
         "hex_report":       ["USE CATALOG"],
-        "monte_carlo":      ["USE CATALOG"],
         "braze":            ["USE CATALOG"],
     },
 }

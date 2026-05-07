@@ -15,6 +15,5 @@
 -- databricks groups create --display-name fivetran
 -- databricks groups create --display-name thoughtspot
 -- databricks groups create --display-name hex_report
--- databricks groups create --display-name monte_carlo
 -- databricks groups create --display-name braze
 -- databricks groups create --display-name read_only_users

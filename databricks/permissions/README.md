@@ -70,7 +70,6 @@ databricks groups create --display-name tableau
 databricks groups create --display-name fivetran
 databricks groups create --display-name thoughtspot
 databricks groups create --display-name hex_report
-databricks groups create --display-name monte_carlo
 databricks groups create --display-name braze
 ```
 
@@ -173,7 +172,6 @@ alo_prod  →  s3://is-prod-lakehouse/
 | `tableau` | — | — | READ | — | — |
 | `thoughtspot` | — | — | READ | — | — |
 | `hex_report` | — | — | READ | — | — |
-| `monte_carlo` | READ | READ | READ | — | — |
 | `braze` | READ | — | — | — | — |
 
 > Dev uses `dev-data-engineering` group; prod uses `data_engineering`.
