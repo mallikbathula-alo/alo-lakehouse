@@ -183,8 +183,8 @@ def run_streaming(
         .format("cloudFiles")
         .option("cloudFiles.format",           "json")
         .option("cloudFiles.schemaLocation",   paths["schema_loc"])
-        .option("cloudFiles.inferColumnTypes", "false")   # enforce provided schema
-        .option("recursiveFileLookup",         "true")    # traverse yyyy/mm/dd/hh
+        .option("cloudFiles.inferColumnTypes",        "false")  # enforce provided schema
+        .option("cloudFiles.useIncrementalListing",   "true")  # only scan dirs modified since last checkpoint; avoids full tree walk on every run
         .schema(ingest_schema)
         .load(paths["source_path"])
     )
@@ -250,7 +250,7 @@ def run_batch(
     raw = (
         spark.read
         .format("json")
-        .option("recursiveFileLookup", "true")
+        .option("recursiveFileLookup",  "true")   # needed for static batch reads; no checkpoint to track dirs
         .schema(ingest_schema)
         .load(paths["source_path"])
     )
