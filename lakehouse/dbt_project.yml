@@ -5,7 +5,7 @@ config-version: 2
 profile: "lakehouse"
 
 # ── Path Configuration ─────────────────────────────────────────────────────────
-model-paths:    ["models"]
+model-paths:    ["models", "examples"]
 asset-paths:    ["assets"]
 test-paths:     ["tests"]
 seed-paths:     ["seeds"]
@@ -38,6 +38,11 @@ models:
         - "thoughtspot"
         - "hex_report"
       # Note: INSERT/UPDATE/DELETE managed via Unity Catalog RBAC, not dbt grants
+
+    # ── Examples (developer reference — disabled by default) ──────────────────
+    examples:
+      +enabled: false
+      +schema: bronze
 
     # ── Medallion Layer → Unity Catalog Schema Mapping ─────────────────────────
     bronze:
