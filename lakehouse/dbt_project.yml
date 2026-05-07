@@ -42,6 +42,9 @@ models:
     examples:
       +schema: public
       +tags: ["example"]
+      +grants:
+        select: []   # override parent grants — these groups don't exist in all workspaces
+      +submission_method: serverless_cluster
 
     # ── Medallion Layer → Unity Catalog Schema Mapping ─────────────────────────
     bronze:

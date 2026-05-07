@@ -6,7 +6,7 @@ tables or external sources required.
 
 There are two types of examples:
 
-- **dbt models** (`models/examples/sparksql_incremental.sql`, `models/examples/pyspark_transform.py`) — run via `dbt run`; write to `public` schema so they don't pollute bronze/silver/gold
+- **dbt models** (`models/examples/sparksql_incremental.sql`, `models/examples/pyspark_transform.py`) — run via `dbt run`; write to `alo_dev.public` schema so they don't pollute bronze/silver/gold. No file edits required — run as-is.
 - **Standalone PySpark scripts** (`explore_catalog.py`) — run via `just pyspark-run`;
   connect to Databricks via Databricks Connect (serverless or classic cluster)
 
@@ -45,13 +45,15 @@ Key SparkSQL patterns demonstrated:
 
 ### Run it
 
+No prerequisites beyond a working `dbt debug --target local`. Output lands in `alo_dev.public`.
+
 ```bash
 cd lakehouse
 
-# Full run — creates table in alo_dev.public
+# First run — creates the Delta table in alo_dev.public
 dbt run --select sparksql_incremental --target local
 
-# Incremental run — merges only new rows
+# Second run — incremental merge (only rows newer than current max updated_at)
 dbt run --select sparksql_incremental --target local
 ```
 
@@ -84,14 +86,17 @@ Key PySpark patterns demonstrated:
 
 ### Run it
 
+No cluster needs to be running — the model is pre-configured for serverless (`submission_method="serverless_cluster"`).
+Output lands in `alo_dev.public`.
+
 ```bash
 cd lakehouse
 dbt run --select pyspark_transform --target local
 ```
 
-> Python models execute on Databricks compute (not locally). Output lands in `alo_dev.public`.
-> With serverless, no cluster needs to be running — configure `python_job_config: {serverless: true}`
-> in the model or `dbt_project.yml`. With a classic cluster, set `DATABRICKS_CLUSTER_ID` in `.env`.
+> Python models execute on Databricks serverless compute, not locally.
+> The `submission_method="serverless_cluster"` config in the model (and `+submission_method` in
+> `dbt_project.yml` for all examples) selects the serverless job runner — no `DATABRICKS_CLUSTER_ID` required.
 
 ---
 
@@ -138,12 +143,33 @@ To turn an example into a real model:
 
 1. Copy the file into the appropriate layer directory:
    ```bash
-   cp examples/sparksql_incremental.sql models/bronze/br_my_model.sql
+   cp models/examples/sparksql_incremental.sql models/bronze/br_my_model.sql
+   # or for Python:
+   cp models/examples/pyspark_transform.py models/bronze/br_my_model.py
    ```
 
-2. Remove `enabled=false` from the `config()` block
+2. Update the `config()` block — change `tags=["example"]` to the correct layer tag and remove
+   `submission_method` (Python only, handled by profile default for production):
+   ```sql
+   -- SQL model
+   {{ config(materialized="incremental", ..., tags=["bronze"]) }}
+   ```
+   ```python
+   # Python model
+   dbt.config(materialized="table", tags=["bronze"])
+   ```
 
-3. Add a properties entry in the layer's `.yml` file:
+3. Replace the inline `VALUES` / `spark.createDataFrame()` sample data with real sources:
+   ```sql
+   select * from {{ source("schema", "table") }}
+   ```
+   ```python
+   df = dbt.ref("upstream_model")
+   # or
+   df = dbt.source("schema", "table")
+   ```
+
+4. Add a properties entry in the layer's `.yml` file:
    ```yaml
    - name: br_my_model
      description: "..."
@@ -151,7 +177,7 @@ To turn an example into a real model:
        tags: ["bronze"]
    ```
 
-4. Run pre-commit to validate:
+5. Run pre-commit to validate:
    ```bash
    pre-commit run --files models/bronze/br_my_model.sql
    ```

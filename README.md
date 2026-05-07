@@ -189,8 +189,7 @@ Reference examples live in [`lakehouse/examples/`](lakehouse/examples/README.md)
 | `pyspark_transform.py` | dbt Python model | `cd lakehouse && dbt run --select pyspark_transform --target local` |
 | `explore_catalog.py` | Standalone PySpark script | `just pyspark-run explore_catalog.py` |
 
-> All examples are self-contained — no catalog tables required.
-> dbt examples are disabled by default (`enabled=false`) so they never run in the pipeline.
+All examples are self-contained — no catalog tables required. Output lands in `alo_dev.public`. See [`lakehouse/examples/README.md`](lakehouse/examples/README.md) for full details.
 
 ### Prerequisites
 
@@ -198,28 +197,30 @@ Reference examples live in [`lakehouse/examples/`](lakehouse/examples/README.md)
 # 1. Verify dbt connection
 cd lakehouse && dbt debug --target local
 
-# 2. For standalone PySpark scripts — configure compute in .env:
-#    Serverless (preferred, no cluster needed):
+# 2. For standalone PySpark scripts — configure serverless compute in .env:
 DATABRICKS_SERVERLESS_COMPUTE_ID=auto
-#    Classic cluster (must be running):
+# Classic cluster alternative (cluster must be running):
 # DATABRICKS_CLUSTER_ID=<your-cluster-id>
 ```
 
 ### dbt SQL model
 
+Runs against the SQL Warehouse. No cluster required.
+
 ```bash
 cd lakehouse
 
-# Full run — creates the Delta table from scratch
+# First run — creates the Delta table in alo_dev.public
 dbt run --select sparksql_incremental --target local
 
-# Incremental run — merges only new rows
+# Second run — incremental merge (only newer rows)
 dbt run --select sparksql_incremental --target local
 ```
 
 ### dbt Python model
 
-Python models execute on Databricks compute (serverless or classic cluster).
+Runs on Databricks serverless compute — no cluster required. Pre-configured with
+`submission_method="serverless_cluster"` in the model config.
 
 ```bash
 cd lakehouse && dbt run --select pyspark_transform --target local

@@ -49,7 +49,7 @@
 with raw as (
 
     -- Self-contained sample data using VALUES.
-    -- In production, replace with: select * from {{ source("schema", "table") }}
+    -- In production, replace with: select * from source("schema", "table")
     select *
     from (
         values

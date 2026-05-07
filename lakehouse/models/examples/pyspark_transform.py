@@ -25,7 +25,8 @@ Run:
 def model(dbt, spark):
     dbt.config(
         materialized="table",
-        tags=["bronze"],
+        tags=["example"],
+        submission_method="serverless_cluster",
     )
 
     # All imports inside the function — required for dbt Python models
