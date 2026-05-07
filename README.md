@@ -202,17 +202,21 @@ cd lakehouse && dbt seed --select test_products --target local
 # Using just (recommended — handles cd automatically)
 just run-local br_shopify_us_orders
 
-# Raw dbt command
+# Raw dbt command (requires manifest — run `just get-manifest dev` first)
 cd lakehouse && dbt run --defer --select br_shopify_us_orders --target local --state .
 ```
 
-### Run a dbt Python model (executes on cluster)
+### Run a dbt Python model (executes on Databricks)
+
+Python models run on Databricks compute — serverless (no cluster required) or a classic cluster.
 
 ```bash
-cd lakehouse && dbt run --select br_test_python --target local
-# Reads from test_products seed, adds price_with_tax column
-# Inspect compiled output: cat lakehouse/target/run/lakehouse/models/bronze/br_test_python.py
+# Reference example (self-contained, disabled by default — enable before running)
+cd lakehouse && dbt run --select pyspark_transform --target local
+# Inspect compiled output: cat target/run/lakehouse/examples/pyspark_transform.py
 ```
+
+See `lakehouse/examples/pyspark_transform.py` for the annotated example.
 
 ### Run with prod data as source
 
@@ -240,13 +244,16 @@ dbt run --select tag:gold   --target local
 
 ```bash
 cd lakehouse
-dbt test --select br_test_python       # test a specific model
+dbt test --select <model_name>         # test a specific model
 dbt test --select tag:bronze           # test all bronze models
 ```
 
 ### Run modified models only (same as CI)
 
 ```bash
+# Fetch the latest prod manifest first
+just get-manifest dev
+
 cd lakehouse
 dbt run --defer --select state:modified+1 --target local --state .
 # Runs only changed models + 1 layer downstream; unmodified upstream resolves to prod
