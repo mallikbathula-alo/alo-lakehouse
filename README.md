@@ -544,7 +544,6 @@ alo-lakehouse/
 │   │   ├── holiday_calendar/           # Holiday calendar data
 │   │   └── public/                     # General reference tables (e.g. test_products)
 │   ├── tests/                          # Custom generic tests
-│   ├── assets/                         # Static assets (e.g. images for dbt docs)
 │   └── pyspark/
 │       ├── utils/session.py            # get_spark() — Databricks Connect session
 │       └── examples/explore_catalog.py # Sample catalog explorer
