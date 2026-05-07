@@ -1,7 +1,7 @@
 # alo-lakehouse
 
 Alo Yoga's Databricks Lakehouse — project managing the medallion data platform
-(bronze → silver → gold) on **Databricks + Unity Catalog**. This project enable developers run dbt+SparkSQL, dbt+PySpark and classic PySpark jobs 
+(bronze → silver → gold) on **Databricks + Unity Catalog**. This project enable developers run dbt+SparkSQL, dbt+PySpark and modern Spark jobs using PySpark and Scala 
 
 ---
 
@@ -20,39 +20,39 @@ operational stores.
 └────────────┬────────────────────┘
              │
      ┌───────▼────────┐
-     │  Ingestion     │
-     │  Kinesis +     │
-     │  Firehose      │
-     │  Meltano       │
-     │  FiveTran      │
-     └───────┬────────┘
-             │
-     ┌───────▼────────┐
-     │    AWS S3      │
-     │  (Raw Files)   │
-     └───────┬────────┘
-             │
-     ┌───────▼────────┐
-     │  Databricks    │
-     │  AutoLoader    │
-     │ (cloudFiles)   │
-     └───────┬────────┘
-             │
-     ┌───────▼────────────────────────────────────────┐
-     │               Unity Catalog                    │
-     │                                                │
-     │  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
-     │  │  Bronze  │─▶│  Silver  │─▶│     Gold     │  │
-     │  │ Raw Data │  │   3NF    │  │ Star Schema  │  │
-     │  │          │  │ Modeling │  │  BI-Ready    │  │
-     │  └──────────┘  └──────────┘  └──────┬───────┘  │
-     └──────────────────────────────────────--┼───────┘
-                                              │ (optional)
-                                      ┌───────▼────────┐
-                                      │  Consumption   │
-                                      │  (Redshift,    │
-                                      │   Dynamo etc)  │
-                                      └───────-────────┘                             
+     │  Ingestion     │─── Streaming ─────────────────────────────────┐
+     │  Kinesis +     │                                               │
+     │  Firehose      │                                               │
+     │  Meltano       │                                               │
+     │  FiveTran      │                                               │
+     └───────┬────────┘                                               │
+             │                                                        │
+     ┌───────▼────────┐                                               │
+     │    AWS S3      │                                               │
+     │  (Raw Files)   │                                               │
+     └───────┬────────┘                                               │
+             │                                                        │
+     ┌───────▼────────┐                                               │
+     │  Databricks    │                                               │
+     │  AutoLoader    │                                               │
+     │ (cloudFiles)   │                                               │
+     └───────┬────────┘                                               │
+             │                                                        ▼
+     ┌───────▼────────────────────────────────────────────────────────┐
+     │                  Databricks Unity Catalog                      │
+     │                                                                │
+     │  ┌──────────┐  ┌──────────┐  ┌────────────┐  ┌──────────┐      │
+     │  │  Bronze  │─▶│  Silver  │─▶│    Gold    │  │  Model   │      │
+     │  │ Raw Data │  │   3NF    │  │Star Schema │  │Training /│      │
+     │  │          │  │ Modeling │  │  BI-Ready  │  │ Serving  │      │
+     │  └──────────┘  └──────────┘  └──────┬─────┘  └──────────┘      │
+     └─────────────────────────────────────┴──────────────────────────┘
+                                            │ (optional)
+                                   ┌────────▼───────┐
+                                   │  Consumption   │
+                                   │  (Redshift,    │
+                                   │   Dynamo etc)  │
+                                   └────────────────┘
 ```
 
 | Layer | Tool | Purpose |
