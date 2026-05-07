@@ -67,7 +67,6 @@ operational stores.
 - [Quick Start](#quick-start)
 - [Python Environment](#python-environment)
 - [dbt — Sample Runs](#dbt--sample-runs)
-- [When to Use dbt Python Models vs Standalone PySpark](#when-to-use-dbt-python-models-vs-standalone-pyspark)
 - [PySpark — Sample Runs](#pyspark--sample-runs)
 - [Architecture](#architecture)
 - [Common Commands](#common-commands)
@@ -265,51 +264,6 @@ dbt run --defer --select state:modified+1 --target local --state .
 cd lakehouse && dbt docs generate && dbt docs serve
 # Opens http://localhost:8080
 ```
-
----
-
-## When to Use dbt Python Models vs Standalone PySpark
-
-**Use dbt Python models by default. Use standalone PySpark scripts only when dbt can't do the job.**
-
-### Use dbt Python models when:
-
-| Scenario | Reason |
-|----------|--------|
-| Output is a table consumed downstream | Gets `dbt.ref()` lineage, appears in DAG, testable |
-| Transformation is part of bronze/silver/gold | Orchestrated automatically with the rest of the pipeline |
-| You need complex PySpark logic SQL can't express | ML feature engineering, array explosion, custom UDFs |
-| Data quality matters | `dbt test` works on Python model outputs just like SQL |
-
-```python
-# lakehouse/models/bronze/br_example.py
-def model(dbt, spark):
-    dbt.config(materialized="table", tags=["bronze"])
-    df = dbt.ref("upstream_model")           # tracked lineage
-    return df.withColumn(...)                # runs on cluster, result in Unity Catalog
-```
-
-### Use standalone PySpark scripts (`lakehouse/examples/`) when:
-
-| Scenario | Reason |
-|----------|--------|
-| Ad-hoc exploration / analysis | No need to materialize a permanent table |
-| ML model training | Output is a model artifact, not a Delta table |
-| Streaming jobs | dbt doesn't support streaming |
-| Multi-step pipelines with side effects | Writing to external systems, S3, APIs |
-| One-off data fixes or backfills | Shouldn't be in the dbt DAG permanently |
-
-```python
-# lakehouse/examples/my_analysis.py
-spark = get_spark()
-df = spark.table("alo_dev.bronze.br_shopify_us_orders")
-df.filter(...).show()                        # explore only, nothing persisted
-```
-
-> **Rule:** If the output is a table that other models or BI tools depend on → dbt Python model.
-> If it's exploratory, ML, streaming, or a one-off → standalone script.
-> Don't use standalone scripts to produce production tables — you lose lineage, testing,
-> and documentation.
 
 ---
 
