@@ -1,12 +1,19 @@
 """
 ingest_utils.py
 ───────────────
-Shared utilities for Shopify GraphQL AutoLoader ingestion scripts.
-Compatible with Databricks cluster (spark_python_task) and local
-Databricks Connect execution.
+Shopify GraphQL AutoLoader ingestion helpers.
+Specific to the AutoLoader pipeline pattern — path conventions, CLI args,
+streaming/batch runners.
+
+Generic utilities (get_logger, get_spark, get_script_dir, dedup, preview_table)
+are in spark_utils.py and re-exported here for backward compatibility with
+existing ingest scripts.
 
 Usage in each ingest script:
-    from ingest_utils import get_logger, get_spark, parse_ingest_args, build_paths, dedup, run_streaming, run_batch
+    from ingest_utils import (
+        get_logger, get_spark, parse_ingest_args,
+        build_paths, dedup, run_streaming, run_batch, preview_table,
+    )
 """
 
 from __future__ import annotations
@@ -14,81 +21,22 @@ from __future__ import annotations
 import logging
 import os
 
+# Re-export generic utilities so existing ingest scripts don't need to change
+from spark_utils import get_logger, get_script_dir, get_spark, dedup, preview_table
 
-# ── Logging ───────────────────────────────────────────────────────────────────
-
-def get_logger(name: str) -> logging.Logger:
-    """
-    Returns a Logger that writes timestamped, levelled messages to stdout.
-    On Databricks cluster, stdout is captured in driver logs and surfaced in
-    the task run UI — unlike plain print(), these include timestamps and level.
-    """
-    logger = logging.getLogger(name)
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter(
-            fmt="%(asctime)s  %(levelname)-8s  [%(name)s]  %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        ))
-        logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
-    return logger
-
-
-# ── Script directory resolution ───────────────────────────────────────────────
-
-def get_script_dir() -> str:
-    """
-    Returns the absolute directory of the *calling* script.
-
-    On Databricks cluster, spark_python_task executes the file via exec() so
-    __file__ may not be defined. We walk up the call stack to find the first
-    frame that has a __file__ in its globals (the actual script being run),
-    then fall back to inspect if nothing is found.
-    """
-    import inspect
-    frame = inspect.currentframe()
-    try:
-        # Walk up until we find a frame whose __file__ is not ingest_utils itself
-        caller = frame.f_back
-        while caller is not None:
-            filename = caller.f_globals.get("__file__")
-            if filename and not filename.endswith("ingest_utils.py"):
-                return os.path.dirname(os.path.realpath(filename))
-            caller = caller.f_back
-    finally:
-        del frame   # avoid reference cycles
-
-    raise RuntimeError(
-        "Could not determine script directory. "
-        "Pass script_dir explicitly to get_spark()."
-    )
-
-
-# ── SparkSession ──────────────────────────────────────────────────────────────
-
-def get_spark(script_dir: str | None = None):
-    """
-    Returns a SparkSession appropriate for the current execution context.
-
-    Cluster (DATABRICKS_RUNTIME_VERSION is set):
-        Uses SparkSession.builder.getOrCreate(). The cluster's service principal
-        handles Unity Catalog auth — no credentials needed.
-
-    Local (Databricks Connect):
-        Uses lakehouse/utils/session.py (same package) which reads host/token
-        from .env and ~/.dbt/profiles.yml and connects via gRPC.
-    """
-    if os.environ.get("DATABRICKS_RUNTIME_VERSION"):
-        from pyspark.sql import SparkSession
-        return SparkSession.builder.getOrCreate()
-
-    import sys
-    utils_dir = os.path.dirname(os.path.abspath(__file__))
-    if utils_dir not in sys.path:
-        sys.path.insert(0, utils_dir)
-    from session import get_spark as _connect
-    return _connect()
+__all__ = [
+    # generic — from spark_utils
+    "get_logger",
+    "get_script_dir",
+    "get_spark",
+    "dedup",
+    "preview_table",
+    # ingest-specific
+    "parse_ingest_args",
+    "build_paths",
+    "run_streaming",
+    "run_batch",
+]
 
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
@@ -129,7 +77,6 @@ def build_paths(catalog: str, dataset: str, source_date: str = "") -> dict:
     Returns dict with keys:
         source_path, checkpoint_loc, schema_loc, output_table
     """
-    # dataset in path preserves original casing (lineItems); table name is lower
     base = f"/Volumes/{catalog}/bronze/firehouse/kinesis/shopify/graphql/{dataset}"
     table_name = dataset.lower()
     return {
@@ -138,30 +85,6 @@ def build_paths(catalog: str, dataset: str, source_date: str = "") -> dict:
         "schema_loc":     f"/Volumes/{catalog}/bronze/_autoloader_schema/shopify_graphql_{table_name}",
         "output_table":   f"`{catalog}`.bronze.shopify_gq_{table_name}",
     }
-
-
-# ── Dedup helper ──────────────────────────────────────────────────────────────
-
-def dedup(df, *order_cols):
-    """
-    Deduplicates df by unique_key, keeping one row per key.
-
-    order_cols: Column expressions with ordering applied
-                e.g. col("updated_at").desc_nulls_last(), col("_ingested_at").desc()
-
-    Example:
-        from pyspark.sql.functions import col
-        dedup(df, col("updated_at").desc_nulls_last(), col("_ingested_at").desc())
-    """
-    from pyspark.sql.functions import row_number, col
-    from pyspark.sql.window import Window
-
-    w = Window.partitionBy("unique_key").orderBy(*order_cols)
-    return (
-        df.withColumn("_rank", row_number().over(w))
-          .filter(col("_rank") == 1)
-          .drop("_rank")
-    )
 
 
 # ── AutoLoader streaming runner ───────────────────────────────────────────────
@@ -267,15 +190,3 @@ def run_batch(
         .saveAsTable(paths["output_table"])
     )
     log.info("Batch write complete → %s", paths["output_table"])
-
-
-# ── Preview helper ────────────────────────────────────────────────────────────
-
-def preview_table(spark, output_table: str, n: int = 5, logger: logging.Logger | None = None) -> None:
-    """Logs row count, prints schema and a sample of the output table."""
-    log = logger or get_logger("preview")
-    final = spark.table(output_table)
-    count = final.count()
-    log.info("Total rows in %s: %s", output_table, f"{count:,}")
-    final.printSchema()
-    final.show(n, truncate=80)
