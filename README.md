@@ -511,6 +511,7 @@ alo-lakehouse/
 │   │   ├── README.md                   # Setup + deploy steps
 │   │   ├── daily_run.json              # Daily 4 AM PT: bronze→silver→gold→tests
 │   │   └── full_refresh.json           # Sundays 1 AM PT: full rebuild of all layers
+│   └── deploy_workflows.py             # Upserts workflow definitions to target workspace
 │   └── permissions/                    # Unity Catalog setup (see README for full steps)
 │       ├── README.md                   # Full catalog setup guide
 │       ├── groups_setup.sql            # Account-level group creation
@@ -521,7 +522,6 @@ alo-lakehouse/
 ├── scripts/
 │   ├── setup.sh                        # Local dev bootstrap (all prerequisites)
 │   ├── run_sql.py                      # SQL file runner for setup scripts
-│   ├── deploy_workflows.py             # Upserts Databricks Workflow definitions
 │   └── permissions/                    # Unity Catalog GRANT management
 ├── lakehouse/
 │   ├── dbt_project.yml

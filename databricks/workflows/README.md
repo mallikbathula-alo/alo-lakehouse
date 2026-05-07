@@ -1,7 +1,7 @@
 # Databricks Workflows
 
 Workflow definitions for the alo-lakehouse dbt pipeline.
-Deployed and managed via `scripts/deploy_workflows.py` (Jobs API 2.1).
+Deployed and managed via `databricks/deploy_workflows.py` (Jobs API 2.1).
 
 ---
 

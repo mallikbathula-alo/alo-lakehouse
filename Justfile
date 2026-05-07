@@ -37,7 +37,7 @@ deploy-dbt-docs-manifest env:
 # ── Databricks Workflows ───────────────────────────────────────────────────────
 
 deploy-workflows env="dev":
-    uv run python scripts/deploy_workflows.py --env {{env}}
+    uv run python databricks/deploy_workflows.py --env {{env}}
 
 # ── SQL Runner ────────────────────────────────────────────────────────────────
 

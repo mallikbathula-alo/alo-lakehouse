@@ -79,5 +79,5 @@ jobs:
           TOKEN=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
           echo "::add-mask::$TOKEN"
           export DATABRICKS_TOKEN=$TOKEN
-          uv run python scripts/deploy_workflows.py --env ${{ inputs.env }}
+          uv run python databricks/deploy_workflows.py --env ${{ inputs.env }}
 

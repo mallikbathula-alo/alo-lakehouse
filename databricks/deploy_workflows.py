@@ -6,8 +6,8 @@ Upserts Databricks Workflow (Jobs API 2.1) definitions from
 databricks/workflows/*.json into the target workspace.
 
 Usage:
-    DATABRICKS_HOST=... DATABRICKS_TOKEN=... python scripts/deploy_workflows.py --env dev
-    python scripts/deploy_workflows.py --env prod   # uses DATABRICKS_* env vars or profile
+    DATABRICKS_HOST=... DATABRICKS_TOKEN=... python databricks/deploy_workflows.py --env dev
+    python databricks/deploy_workflows.py --env prod   # uses DATABRICKS_* env vars or profile
 """
 
 from __future__ import annotations
