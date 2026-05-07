@@ -12,45 +12,43 @@ as part of the normal pipeline. Enable them explicitly to experiment.
 
 | File | Demonstrates |
 |------|-------------|
-| `incremental_merge.sql` | SparkSQL incremental model — merge strategy, `is_incremental()` filter, casting, macros, `cluster_by` |
+| `sparksql_incremental.sql` | SparkSQL incremental model — VALUES sample data, merge strategy, `is_incremental()`, casting, CASE, `cluster_by` |
 | `pyspark_transform.py` | dbt Python model — PySpark DataFrame transformations, `dbt.ref()`, `withColumn()`, returning results to Delta |
 
 ---
 
-## incremental_merge.sql
+## sparksql_incremental.sql
 
-Shows the standard pattern for incremental bronze models in this repo:
+Shows the standard pattern for incremental bronze models using self-contained
+sample data — no catalog tables required.
 
 ```
-source table (raw)
+VALUES (sample rows)
     │
-    ├── Full run:        read all rows, merge into Delta table by unique_key
+    ├── Full run:        materialize all rows into a Delta table (unique_key = order_id)
     └── Incremental run: read only rows where updated_at > current max, merge
 ```
 
-Key SparkSQL patterns:
-- `cast(col as timestamp)` / `cast(to_date(col) as date)` — explicit type casting
-- `{% if is_incremental() %}` — conditionally filter new rows on subsequent runs
-- `{{ source("schema", "table") }}` — reference a raw source table
-- `{{ cents_to_dollars("col") }}` — project macro for monetary conversion
+Key SparkSQL patterns demonstrated:
+- `VALUES` clause — inline sample data, no source dependency
+- `cast(col as timestamp)` / `cast(to_date(col) as date)` — explicit type casting (no `::` shorthand)
+- `{% if is_incremental() %}` — filter new rows on subsequent runs; `{{ this }}` = current Delta table
+- `cast(amount_cents / 100.0 as decimal(10, 2))` — arithmetic with precision control
+- `upper()`, `case when` — string and conditional functions
+- `current_timestamp()` — SparkSQL equivalent of `getdate()` / `now()`
 - `cluster_by` — Databricks liquid clustering for faster queries on large tables
 
 ### Run it
 
 ```bash
-# Enable and run against dev
 cd lakehouse
-dbt run --select incremental_merge --target local \
-    --vars '{"DBT_MATERIALIZATION": "table"}'
 
-# Or temporarily override enabled in the command
-dbt run --select incremental_merge --target local \
-    --vars '{"DBT_MATERIALIZATION": "table"}' \
-    --no-version-check
+# Full run — creates the Delta table from scratch
+dbt run --select sparksql_incremental --target local
+
+# Incremental run — merges only new rows
+dbt run --select sparksql_incremental --target local
 ```
-
-> Note: this model reads from `src_shopify_us.orders`. Make sure that source
-> is accessible in your target catalog before running.
 
 ---
 
@@ -100,7 +98,7 @@ To turn an example into a real model:
 
 1. Copy the file into the appropriate layer directory:
    ```bash
-   cp examples/incremental_merge.sql models/bronze/br_my_model.sql
+   cp examples/sparksql_incremental.sql models/bronze/br_my_model.sql
    ```
 
 2. Remove `enabled=false` from the `config()` block
