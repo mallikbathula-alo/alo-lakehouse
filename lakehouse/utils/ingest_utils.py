@@ -142,9 +142,9 @@ def run_streaming(
 
     output_table = paths["output_table"]
 
-    def _process_batch(batch_df, batch_id):
+    def _process_micro_batch(batch_df, batch_id):
         raw_count = batch_df.count()
-        log.info("Batch %s: %s raw rows ingested", batch_id, f"{raw_count:,}")
+        log.info("Micro-batch %s: %s raw rows ingested", batch_id, f"{raw_count:,}")
         if raw_count == 0:
             return
         final = transform_fn(batch_df)
@@ -153,11 +153,11 @@ def run_streaming(
         if cols:
             writer = writer.clusterBy(*cols)
         writer.saveAsTable(output_table)
-        log.info("Batch %s: %s rows written → %s", batch_id, f"{written:,}", output_table)
+        log.info("Micro-batch %s: %s rows written → %s", batch_id, f"{written:,}", output_table)
 
     query = (
         raw_stream.writeStream
-        .foreachBatch(_process_batch)
+        .foreachBatch(_process_micro_batch)
         .option("checkpointLocation", paths["checkpoint_loc"])
         .trigger(availableNow=True)
         .start()
