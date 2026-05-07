@@ -150,7 +150,6 @@ curl -s https://dbc-e27abc0b-645c.cloud.databricks.com/api/2.0/clusters/list \
 # Success: returns JSON with cluster list
 # Failure: {"error_code":"PERMISSION_DENIED","message":"Invalid access token..."}
 ```
-
 > If `DATABRICKS_TOKEN` is set as a shell env var it will override `profiles.yml`.
 > Always check with `echo $DATABRICKS_TOKEN` and `unset DATABRICKS_TOKEN` if stale.
 
@@ -158,7 +157,11 @@ Verify dbt connectivity (must run from `lakehouse/`):
 ```bash
 cd lakehouse && dbt debug --target local
 ```
-
+**5. DBeaver Setup** :
+```bash
+1. in DBeaver Connection, Selecy JDBC and URL "jdbc:databricks://dbc-e27abc0b-645c.cloud.databricks.com:443/default;transportMode=http;ssl=1;httpPath=/sql/1.0/warehouses/8068c2c9538ef572;AuthMech=3"
+2. Username: token and Password :<your-pat-token>
+```
 ---
 
 ## Python Environment
