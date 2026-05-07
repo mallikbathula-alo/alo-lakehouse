@@ -34,7 +34,7 @@
       "spark_python_task": {
         "python_file": "lakehouse/models/bronze/shopify_ingestions/shopify_fulfillments.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev"]
+        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
       }
     }
   ],
