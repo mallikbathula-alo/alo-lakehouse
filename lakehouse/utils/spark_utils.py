@@ -111,9 +111,14 @@ def _read_dbt_profiles() -> dict:
 
 # ── SparkSession ──────────────────────────────────────────────────────────────
 
-def get_spark():
+def get_spark(script_dir: str | None = None):
     """
     Returns a SparkSession appropriate for the current execution context.
+
+    Args:
+        script_dir: Accepted for backward compatibility with ingest scripts that
+                    pass _script_dir. No longer used — credential resolution is
+                    handled via .env and ~/.dbt/profiles.yml directly.
 
     Cluster (DATABRICKS_RUNTIME_VERSION is set):
         SparkSession.builder.getOrCreate() — cluster service principal handles
