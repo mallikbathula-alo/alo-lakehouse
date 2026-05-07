@@ -5,17 +5,16 @@ Credential resolution order (first wins):
   1. Environment variables: DATABRICKS_HOST, DATABRICKS_TOKEN
   2. ~/.dbt/profiles.yml  (lakehouse → local target)
 
-DATABRICKS_CLUSTER_ID must always be set in .env or as an env var — it is not
-in profiles.yml.
+Compute modes (set in .env):
+  - Serverless (preferred): set DATABRICKS_SERVERLESS_COMPUTE_ID=auto
+    No cluster required — compute spins up on demand.
+  - Classic cluster:        set DATABRICKS_CLUSTER_ID=<cluster-id>
+    Cluster must be running in the Databricks workspace.
 
 Usage:
     from utils.session import get_spark
     spark = get_spark()
-    df = spark.table("dev.public.test_products")
-
-Requires:
-    - DATABRICKS_CLUSTER_ID in .env (cluster must be running)
-    - uv sync --group pyspark (run from repo root)
+    df = spark.table("alo_dev.bronze.shopify_gq_orders")
 """
 
 import os
@@ -46,14 +45,15 @@ def _read_dbt_profiles() -> dict:
 def get_spark() -> DatabricksSession:
     dbt = _read_dbt_profiles()
 
-    host = os.environ.get("DATABRICKS_HOST") or dbt.get("host")
+    host  = os.environ.get("DATABRICKS_HOST") or dbt.get("host")
     token = os.environ.get("DATABRICKS_TOKEN") or dbt.get("token")
-    cluster_id = os.environ.get("DATABRICKS_CLUSTER_ID")
+
+    serverless_id = os.environ.get("DATABRICKS_SERVERLESS_COMPUTE_ID")
+    cluster_id    = os.environ.get("DATABRICKS_CLUSTER_ID")
 
     missing = [k for k, v in {
         "DATABRICKS_HOST (env var or profiles.yml → host)": host,
         "DATABRICKS_TOKEN (env var or profiles.yml → token)": token,
-        "DATABRICKS_CLUSTER_ID (env var)": cluster_id,
     }.items() if not v]
 
     if missing:
@@ -63,11 +63,21 @@ def get_spark() -> DatabricksSession:
             + "\nSet env vars in .env or ensure ~/.dbt/profiles.yml is configured."
         )
 
-    if len(token) < 20:
+    if not serverless_id and not cluster_id:
+        raise EnvironmentError(
+            "No compute configured. Set one of:\n"
+            "  - DATABRICKS_SERVERLESS_COMPUTE_ID=auto   (serverless, no cluster needed)\n"
+            "  - DATABRICKS_CLUSTER_ID=<id>              (classic cluster, must be running)"
+        )
+
+    if token and len(token) < 20:
         raise EnvironmentError(
             f"DATABRICKS_TOKEN appears truncated (len={len(token)}). "
             "Check for a stale DATABRICKS_TOKEN env var: run `unset DATABRICKS_TOKEN`"
         )
+
+    if serverless_id:
+        return DatabricksSession.builder.serverless(True).getOrCreate()
 
     return (
         DatabricksSession.builder
