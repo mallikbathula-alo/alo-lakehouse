@@ -2,6 +2,38 @@
 -- sparksql_incremental.sql
 -- Demonstrates SparkSQL incremental model patterns on self-contained sample data.
 -- No external sources required — runs as-is after enabling.
+--
+-- Key patterns demonstrated:
+--   - VALUES clause        — inline sample data, no source() dependency
+--   - Incremental merge    — materialized="incremental", incremental_strategy="merge"
+--   - is_incremental()     — Jinja block that filters new rows on subsequent runs
+--   - {{ this }}           — resolves to the current model's Delta table
+--   - unique_key           — column used to match existing rows for upsert
+--   - cluster_by           — Databricks liquid clustering for query performance
+--   - cast()               — explicit type casting; SparkSQL has no :: shorthand
+--   - to_date()            — extract a date from a timestamp string
+--   - decimal(p, s)        — fixed-precision numeric type for monetary values
+--   - upper()              — string function
+--   - case when            — conditional column logic
+--   - current_timestamp()  — audit column; equivalent of getdate() / now()
+--
+-- SparkSQL vs standard SQL gotchas:
+--   - No ::      → use cast(col as type)
+--   - No isnull  → use col is null
+--   - No top N   → use limit N
+--   - No nvl     → use coalesce(col, fallback)
+--   - No varchar → use string
+--   - No float8  → use double
+--
+-- How incremental runs work:
+--   1. First run  : full table scan of raw CTE, writes all rows to Delta table
+--   2. Subsequent : is_incremental() = true, WHERE clause filters to new rows only,
+--                   dbt merges result into existing table on unique_key
+--
+-- Run:
+--     cd lakehouse
+--     dbt run --select sparksql_incremental --target local   (first run: full)
+--     dbt run --select sparksql_incremental --target local   (subsequent: incremental)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 {{
