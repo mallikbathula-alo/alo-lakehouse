@@ -529,9 +529,10 @@ alo-lakehouse/
 ├── lakehouse/
 │   ├── dbt_project.yml
 │   ├── packages.yml
+│   ├── ingestions/
+│   │   └── shopify/                    # Shopify GraphQL AutoLoader ingest scripts (spark_python_task)
 │   ├── models/
-│   │   ├── bronze/                     # Raw ingestion (br_ prefix)
-│   │   │   └── examples/               # Example SQL + Python dbt models
+│   │   ├── bronze/                     # Raw ingestion dbt models (br_ prefix)
 │   │   ├── silver/                     # Cleaned, deduped, business logic
 │   │   ├── gold/                       # Analytics-ready aggregations
 │   │   └── mgt/                        # Operational tables

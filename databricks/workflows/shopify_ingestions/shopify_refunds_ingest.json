@@ -32,7 +32,7 @@
       "description": "Read Shopify refunds from Firehose Volume via AutoLoader, explode array, write to Delta",
       "environment_key": "ingest_env",
       "spark_python_task": {
-        "python_file": "lakehouse/models/bronze/shopify_ingestions/shopify_refunds.py",
+        "python_file": "lakehouse/ingestions/shopify/shopify_refunds.py",
         "source": "GIT",
         "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
       }
