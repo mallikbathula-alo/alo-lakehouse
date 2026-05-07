@@ -8,6 +8,66 @@ Alo Yoga's Databricks Lakehouse — dbt project managing the medallion data plat
 
 ---
 
+## Introduction
+
+The lakehouse ingests data from multiple source systems, lands it in AWS S3 via streaming
+and batch pipelines, then transforms it through a medallion architecture into
+analytics-ready tables. An optional consumption layer pushes curated data to downstream
+operational stores.
+
+```
+┌─────────────────────────────────┐
+│         Source Systems          │
+│  Shopify · OMS · Anaplan · GA4  │
+│  Braze · Salesforce · FiveTran  │
+└────────────┬────────────────────┘
+             │
+     ┌───────▼────────┐
+     │  Ingestion     │
+     │  Kinesis +     │
+     │  Firehose      │
+     │  Meltano       │
+     │  FiveTran      │
+     └───────┬────────┘
+             │
+     ┌───────▼────────┐
+     │    AWS S3      │
+     │  (Raw Files)   │
+     └───────┬────────┘
+             │
+     ┌───────▼────────┐
+     │  Databricks    │
+     │  AutoLoader    │
+     │ (cloudFiles)   │
+     └───────┬────────┘
+             │
+     ┌───────▼────────────────────────────────────────┐
+     │               Unity Catalog                    │
+     │                                                │
+     │  ┌──────────┐  ┌──────────┐  ┌──────────────┐ │
+     │  │  Bronze  │─▶│  Silver  │─▶│     Gold     │ │
+     │  │ Raw Data │  │   3NF    │  │ Star Schema  │ │
+     │  │          │  │ Modeling │  │  BI-Ready    │ │
+     │  └──────────┘  └──────────┘  └──────┬───────┘ │
+     └──────────────────────────────────────┼─────────┘
+                                            │ (optional)
+                              ┌─────────────▼──────────────┐
+                              │     Consumption Layer       │
+                              │  Redshift · DynamoDB ·      │
+                              │  PostgreSQL · Thoughtspot   │
+                              └────────────────────────────┘
+```
+
+| Layer | Tool | Purpose |
+|-------|------|---------|
+| **Ingestion** | Kinesis + Firehose, Meltano, FiveTran | Stream and batch from source systems to S3 |
+| **Bronze** | Databricks AutoLoader (`cloudFiles`) | Raw data landed as Delta tables, schema-on-read |
+| **Silver** | dbt (SparkSQL) | Deduplication, 3NF modeling, business logic |
+| **Gold** | dbt (SparkSQL) | Star schema aggregations, BI-ready fact/dim tables |
+| **Consumption** | dbt / custom scripts | Optional push to Redshift, DynamoDB, PostgreSQL |
+
+---
+
 ## Table of Contents
 
 - [Quick Start](#quick-start)
