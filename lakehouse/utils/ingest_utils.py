@@ -190,6 +190,7 @@ def run_streaming(
     )
 
     output_table = paths["output_table"]
+    _total_written = [0]  # mutable accumulator across micro-batches
 
     def _process_micro_batch(batch_df, batch_id):
         raw_count = batch_df.count()
@@ -202,6 +203,7 @@ def run_streaming(
         if cols:
             writer = writer.clusterBy(*cols)
         writer.saveAsTable(output_table)
+        _total_written[0] += written
         log.info("Micro-batch %s: %s rows written → %s", batch_id, f"{written:,}", output_table)
 
     query = (
@@ -212,7 +214,7 @@ def run_streaming(
         .start()
     )
     query.awaitTermination()
-    log.info("Streaming complete")
+    log.info("Run complete — %s rows written this run → %s", f"{_total_written[0]:,}", output_table)
 
 
 # ── Batch runner ──────────────────────────────────────────────────────────────
@@ -248,6 +250,7 @@ def run_batch(
         .load(paths["source_path"])
     )
     final = transform_fn(raw)
+    written = final.count()
     writer = (
         final.write
         .format("delta")
@@ -257,4 +260,4 @@ def run_batch(
     if cols:
         writer = writer.clusterBy(*cols)
     writer.saveAsTable(paths["output_table"])
-    log.info("Batch write complete → %s", paths["output_table"])
+    log.info("Run complete — %s rows written this run → %s", f"{written:,}", paths["output_table"])

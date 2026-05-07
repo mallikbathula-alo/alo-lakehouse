@@ -212,11 +212,17 @@ def preview_table(
     output_table: str,
     n: int = 5,
     logger: logging.Logger | None = None,
+    show_preview: bool = False,
 ) -> None:
-    """Logs row count, prints schema and a sample of any Delta table."""
+    """
+    Logs total row count for output_table.
+    Optionally prints schema and sample rows when show_preview=True.
+    Default is False — total rows only, no schema or sample output.
+    """
     log = logger or get_logger("preview")
     df = spark.table(output_table)
     count = df.count()
     log.info("Total rows in %s: %s", output_table, f"{count:,}")
-    df.printSchema()
-    df.show(n, truncate=80)
+    if show_preview:
+        df.printSchema()
+        df.show(n, truncate=80)
