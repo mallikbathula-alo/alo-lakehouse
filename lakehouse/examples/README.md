@@ -13,7 +13,7 @@ as part of the normal pipeline. Enable them explicitly to experiment.
 | File | Demonstrates |
 |------|-------------|
 | `sparksql_incremental.sql` | SparkSQL incremental model — VALUES sample data, merge strategy, `is_incremental()`, casting, CASE, `cluster_by` |
-| `pyspark_transform.py` | dbt Python model — PySpark DataFrame transformations, `dbt.ref()`, `withColumn()`, returning results to Delta |
+| `pyspark_transform.py` | dbt Python model — inline sample data, `withColumn()`, window dedup, type casting, conditional logic, null handling |
 
 ---
 
@@ -54,15 +54,20 @@ dbt run --select sparksql_incremental --target local
 
 ## pyspark_transform.py
 
-Shows how to write a **dbt Python model** that runs PySpark on the Databricks cluster.
+Shows how to write a **dbt Python model** using self-contained sample data —
+no catalog tables required.
 
-Key concepts:
-- The `model(dbt, spark)` function signature is fixed — dbt injects both arguments
-- `dbt.ref("model_name")` reads an upstream dbt model or seed as a Spark DataFrame
-- `dbt.source("schema", "table")` reads a raw source
-- Return a Spark DataFrame — dbt writes it to Unity Catalog as a Delta table
-- Import PySpark functions **inside** the function body (required for dbt Python models)
-- `dbt.config()` sets materialization, tags, and other model config
+Key PySpark patterns demonstrated:
+- `spark.createDataFrame()` — inline sample data with explicit schema, no `dbt.ref()` dependency
+- `F.regexp_extract()` — extract numeric ID from a GraphQL global ID string
+- `F.to_timestamp()`, `F.to_date()` — date/time parsing
+- `F.round().cast(DecimalType)` — arithmetic with precision control
+- `F.when().otherwise()` — conditional column logic
+- `F.coalesce()` — null handling / fallback values
+- `F.upper()` — string functions
+- `F.current_timestamp()` — audit column
+- `Window + row_number()` — deduplication by natural key, keeping latest row
+- All imports inside `model()` — required for dbt Python models
 
 ### When to use Python models vs SQL models
 
@@ -70,25 +75,17 @@ Key concepts:
 |---------|-----------|
 | Standard SELECT transformations | Complex array/struct manipulation |
 | Aggregations, joins, window functions | ML feature engineering |
-| 95% of bronze/silver/gold models | Multi-step PySpark logic SQL can't express |
+| 95% of bronze/silver/gold models | Multi-step logic SQL can't express cleanly |
 
 ### Run it
 
-First, make sure the `test_products` seed exists:
-
 ```bash
 cd lakehouse
-dbt seed --select test_products --target local
-```
-
-Then run the Python model:
-
-```bash
 dbt run --select pyspark_transform --target local
 ```
 
 > Python models execute on the Databricks cluster (not locally). The cluster must
-> be running before invoking `dbt run`. Check `DATABRICKS_CLUSTER_ID` in `.env`.
+> be running. Check `DATABRICKS_CLUSTER_ID` in `.env`.
 
 ---
 
