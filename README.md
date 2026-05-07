@@ -120,10 +120,15 @@ lakehouse:
   target: local
 ```
 
-**2. PySpark cluster** — edit `.env` (copy from `.env.example`):
+**2. PySpark compute** — edit `.env` (copy from `.env.example`):
 ```bash
 # Host and token are read from ~/.dbt/profiles.yml automatically
-DATABRICKS_CLUSTER_ID=<your-cluster-id>   # Compute → <cluster> → URL: .../clusters/<ID>
+
+# Option A — Serverless (preferred): no cluster required
+DATABRICKS_SERVERLESS_COMPUTE_ID=auto
+
+# Option B — Classic cluster: cluster must be running
+# DATABRICKS_CLUSTER_ID=<your-cluster-id>   # Compute → <cluster> → URL: .../clusters/<ID>
 ```
 
 **3. Databricks CLI** — run once:
@@ -304,15 +309,16 @@ df.filter(...).show()                        # explore only, nothing persisted
 ## PySpark — Sample Runs
 
 PySpark scripts in `lakehouse/examples/` use **Databricks Connect** — code runs locally,
-compute runs on your Databricks cluster.
+compute runs on Databricks (serverless or classic cluster).
 
-> The cluster must be **running** before connecting. DATABRICKS_CLUSTER_ID must be set in `.env`.
+> **Serverless (recommended):** set `DATABRICKS_SERVERLESS_COMPUTE_ID=auto` in `.env` — no cluster required.
+> **Classic cluster:** set `DATABRICKS_CLUSTER_ID=<id>` in `.env` — cluster must be running.
 
 ### Run the catalog explorer example
 
 ```bash
-just pyspark-run examples/explore_catalog.py
-# Lists schemas in alo_dev, shows tables in public schema
+just pyspark-run explore_catalog.py
+# Lists schemas in alo_dev, shows tables in bronze schema
 ```
 
 Expected output:
@@ -546,7 +552,7 @@ alo-lakehouse/
 │   │   └── public/                     # General reference tables (e.g. test_products)
 │   ├── tests/                          # Custom generic tests
 │   ├── utils/
-│   │   ├── session.py                  # get_spark() — Databricks Connect session factory
+│   │   ├── session.py                  # get_spark() — Databricks Connect session factory (serverless + classic)
 │   │   └── ingest_utils.py             # Shared AutoLoader ingest helpers (logging, paths, dedup)
 │   └── examples/                       # Developer reference examples (see examples/README.md)
 │       ├── sparksql_incremental.sql    # SparkSQL incremental dbt model (self-contained)

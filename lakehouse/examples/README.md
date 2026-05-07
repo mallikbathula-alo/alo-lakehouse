@@ -9,7 +9,7 @@ There are two types of examples:
 - **dbt models** (`sparksql_incremental.sql`, `pyspark_transform.py`) — run via `dbt run`;
   disabled by default (`enabled: false`) so they never run in the pipeline
 - **Standalone PySpark scripts** (`explore_catalog.py`) — run via `just pyspark-run`;
-  connect to the Databricks cluster via Databricks Connect
+  connect to Databricks via Databricks Connect (serverless or classic cluster)
 
 ---
 
@@ -90,16 +90,17 @@ cd lakehouse
 dbt run --select pyspark_transform --target local
 ```
 
-> Python models execute on the Databricks cluster (not locally). The cluster must
-> be running. Check `DATABRICKS_CLUSTER_ID` in `.env`.
+> Python models execute on Databricks compute (not locally). With serverless,
+> no cluster needs to be running — configure `python_job_config: {serverless: true}`
+> in the model or `dbt_project.yml`. With a classic cluster, set `DATABRICKS_CLUSTER_ID` in `.env`.
 
 ---
 
 ## explore_catalog.py
 
 Standalone PySpark script — runs locally via Databricks Connect, compute executes
-on the cluster. Demonstrates the full development loop without needing any specific
-catalog tables.
+on Databricks (serverless or classic cluster). Demonstrates the full development loop
+without needing any specific catalog tables.
 
 Key patterns:
 - `get_spark()` — shared session factory from `lakehouse/utils/session.py`
@@ -117,7 +118,18 @@ just pyspark-run explore_catalog.py
 cd lakehouse && ../.venv/bin/python examples/explore_catalog.py
 ```
 
-> Requires the Databricks cluster to be running and `DATABRICKS_CLUSTER_ID` set in `.env`.
+### Compute configuration (`.env`)
+
+```bash
+# Option A — Serverless (preferred): no cluster required
+DATABRICKS_SERVERLESS_COMPUTE_ID=auto
+
+# Option B — Classic cluster: cluster must be running
+# DATABRICKS_CLUSTER_ID=<your-cluster-id>
+```
+
+`get_spark()` in `utils/session.py` checks for `DATABRICKS_SERVERLESS_COMPUTE_ID` first
+and falls back to `DATABRICKS_CLUSTER_ID` if not set.
 
 ---
 
