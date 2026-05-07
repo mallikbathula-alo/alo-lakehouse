@@ -5,8 +5,7 @@ config-version: 2
 profile: "lakehouse"
 
 # ── Path Configuration ─────────────────────────────────────────────────────────
-model-paths:    ["models", "groups"]
-analysis-paths: ["analyses"]
+model-paths:    ["models"]
 asset-paths:    ["assets"]
 test-paths:     ["tests"]
 seed-paths:     ["seeds"]
@@ -38,7 +37,6 @@ models:
         - "fivetran"
         - "thoughtspot"
         - "hex_report"
-        - "monte_carlo"
       # Note: INSERT/UPDATE/DELETE managed via Unity Catalog RBAC, not dbt grants
 
     # ── Medallion Layer → Unity Catalog Schema Mapping ─────────────────────────

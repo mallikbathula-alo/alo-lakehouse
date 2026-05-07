@@ -531,6 +531,7 @@ alo-lakehouse/
 │   ├── packages.yml
 │   ├── models/
 │   │   ├── bronze/                     # Raw ingestion (br_ prefix)
+│   │   │   └── examples/               # Example SQL + Python dbt models
 │   │   ├── silver/                     # Cleaned, deduped, business logic
 │   │   ├── gold/                       # Analytics-ready aggregations
 │   │   └── mgt/                        # Operational tables
@@ -543,9 +544,7 @@ alo-lakehouse/
 │   │   ├── holiday_calendar/           # Holiday calendar data
 │   │   └── public/                     # General reference tables (e.g. test_products)
 │   ├── tests/                          # Custom generic tests
-│   ├── analyses/                       # Ad-hoc analysis SQL
 │   ├── assets/                         # Static assets (e.g. images for dbt docs)
-│   ├── groups/                         # dbt group definitions
 │   └── pyspark/
 │       ├── utils/session.py            # get_spark() — Databricks Connect session
 │       └── examples/explore_catalog.py # Sample catalog explorer
