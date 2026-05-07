@@ -118,9 +118,9 @@ def main():
     log.info("SparkSession ready (Spark %s)", spark.version)
 
     if run_mode == "streaming":
-        run_streaming(spark, paths, SHOPIFY_LINEITEMS_SCHEMA, transform, log, cluster_cols=["_ingested_at"])
+        run_streaming(spark, paths, SHOPIFY_LINEITEMS_SCHEMA, transform, log, cluster_cols=["order_updated_at", "_ingested_at"])
     else:
-        run_batch(spark, paths, SHOPIFY_LINEITEMS_SCHEMA, transform, log, cluster_cols=["_ingested_at"])
+        run_batch(spark, paths, SHOPIFY_LINEITEMS_SCHEMA, transform, log, cluster_cols=["order_updated_at", "_ingested_at"])
 
     preview_table(spark, paths["output_table"], n=5, logger=log)
 

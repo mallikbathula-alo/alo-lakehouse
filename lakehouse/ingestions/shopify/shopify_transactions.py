@@ -95,9 +95,9 @@ def main():
     log.info("SparkSession ready (Spark %s)", spark.version)
 
     if run_mode == "streaming":
-        run_streaming(spark, paths, SHOPIFY_TRANSACTIONS_SCHEMA, transform, log, cluster_cols=["created_at"])
+        run_streaming(spark, paths, SHOPIFY_TRANSACTIONS_SCHEMA, transform, log, cluster_cols=["created_at", "order_updated_at"])
     else:
-        run_batch(spark, paths, SHOPIFY_TRANSACTIONS_SCHEMA, transform, log, cluster_cols=["created_at"])
+        run_batch(spark, paths, SHOPIFY_TRANSACTIONS_SCHEMA, transform, log, cluster_cols=["created_at", "order_updated_at"])
 
     preview_table(spark, paths["output_table"], n=5, logger=log)
 
