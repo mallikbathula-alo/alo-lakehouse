@@ -26,7 +26,6 @@ def model(dbt, spark):
     dbt.config(
         materialized="table",
         tags=["bronze"],
-        enabled=False,          # disabled by default — enable to run
     )
 
     # All imports inside the function — required for dbt Python models

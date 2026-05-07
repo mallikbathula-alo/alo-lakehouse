@@ -43,7 +43,6 @@
         unique_key="order_id",
         cluster_by=["order_date"],
         tags=["bronze"],
-        enabled=false,
     )
 }}
 

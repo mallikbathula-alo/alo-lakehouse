@@ -6,8 +6,7 @@ tables or external sources required.
 
 There are two types of examples:
 
-- **dbt models** (`sparksql_incremental.sql`, `pyspark_transform.py`) — run via `dbt run`;
-  disabled by default (`enabled: false`) so they never run in the pipeline
+- **dbt models** (`models/examples/sparksql_incremental.sql`, `models/examples/pyspark_transform.py`) — run via `dbt run`; write to `public` schema so they don't pollute bronze/silver/gold
 - **Standalone PySpark scripts** (`explore_catalog.py`) — run via `just pyspark-run`;
   connect to Databricks via Databricks Connect (serverless or classic cluster)
 
@@ -49,7 +48,7 @@ Key SparkSQL patterns demonstrated:
 ```bash
 cd lakehouse
 
-# Full run — creates the Delta table from scratch
+# Full run — creates table in alo_dev.public
 dbt run --select sparksql_incremental --target local
 
 # Incremental run — merges only new rows
@@ -90,8 +89,8 @@ cd lakehouse
 dbt run --select pyspark_transform --target local
 ```
 
-> Python models execute on Databricks compute (not locally). With serverless,
-> no cluster needs to be running — configure `python_job_config: {serverless: true}`
+> Python models execute on Databricks compute (not locally). Output lands in `alo_dev.public`.
+> With serverless, no cluster needs to be running — configure `python_job_config: {serverless: true}`
 > in the model or `dbt_project.yml`. With a classic cluster, set `DATABRICKS_CLUSTER_ID` in `.env`.
 
 ---

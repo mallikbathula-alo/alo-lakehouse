@@ -38,6 +38,11 @@ models:
         - "hex_report"
       # Note: INSERT/UPDATE/DELETE managed via Unity Catalog RBAC, not dbt grants
 
+    # ── Developer Examples — write to public schema, never run in CI/prod ────────
+    examples:
+      +schema: public
+      +tags: ["example"]
+
     # ── Medallion Layer → Unity Catalog Schema Mapping ─────────────────────────
     bronze:
       +schema: bronze
