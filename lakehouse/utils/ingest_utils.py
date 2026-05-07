@@ -89,12 +89,19 @@ def build_paths(catalog: str, dataset: str, source_date: str = "") -> dict:
 
 # ── AutoLoader streaming runner ───────────────────────────────────────────────
 
+# Default liquid clustering columns for all Shopify ingest tables.
+# created_at — most queries filter by date range
+# updated_at — used in incremental dedup logic
+_DEFAULT_CLUSTER_COLS: list[str] = ["created_at", "updated_at"]
+
+
 def run_streaming(
     spark,
     paths: dict,
     ingest_schema,
     transform_fn,
     logger: logging.Logger | None = None,
+    cluster_cols: list[str] | None = None,
 ) -> None:
     """
     Runs an AutoLoader streaming ingest using foreachBatch + trigger(availableNow=True).
@@ -110,11 +117,17 @@ def run_streaming(
         transform_fn:   Callable(batch_df: DataFrame) → DataFrame
                         Applied inside foreachBatch on each micro-batch.
         logger:         Optional logger; creates one if None.
+        cluster_cols:   Liquid clustering columns (Databricks Delta).
+                        Defaults to ["created_at", "updated_at"].
+                        Pass [] to disable clustering.
     """
     log = logger or get_logger("run_streaming")
+    cols = cluster_cols if cluster_cols is not None else _DEFAULT_CLUSTER_COLS
+
     log.info("AutoLoader source      : %s", paths["source_path"])
     log.info("Checkpoint             : %s", paths["checkpoint_loc"])
     log.info("Output table           : %s", paths["output_table"])
+    log.info("Cluster by             : %s", cols or "none")
 
     raw_stream = (
         spark.readStream
@@ -136,13 +149,10 @@ def run_streaming(
             return
         final = transform_fn(batch_df)
         written = final.count()
-        (
-            final.write
-            .format("delta")
-            .mode("append")
-            .option("mergeSchema", "true")
-            .saveAsTable(output_table)
-        )
+        writer = final.write.format("delta").mode("append").option("mergeSchema", "true")
+        if cols:
+            writer = writer.clusterBy(*cols)
+        writer.saveAsTable(output_table)
         log.info("Batch %s: %s rows written → %s", batch_id, f"{written:,}", output_table)
 
     query = (
@@ -164,15 +174,22 @@ def run_batch(
     ingest_schema,
     transform_fn,
     logger: logging.Logger | None = None,
+    cluster_cols: list[str] | None = None,
 ) -> None:
     """
     Batch ingest — reads all JSON files directly, overwrites the output table.
     Use for local Databricks Connect runs (just pyspark-run ...).
 
-    Args: same as run_streaming (paths dict, schema, transform_fn).
+    Args:
+        spark, paths, ingest_schema, transform_fn, logger: same as run_streaming.
+        cluster_cols: Liquid clustering columns. Defaults to ["created_at", "updated_at"].
+                      Pass [] to disable clustering.
     """
     log = logger or get_logger("run_batch")
+    cols = cluster_cols if cluster_cols is not None else _DEFAULT_CLUSTER_COLS
+
     log.info("Batch read from : %s", paths["source_path"])
+    log.info("Cluster by      : %s", cols or "none")
 
     raw = (
         spark.read
@@ -182,11 +199,13 @@ def run_batch(
         .load(paths["source_path"])
     )
     final = transform_fn(raw)
-    (
+    writer = (
         final.write
         .format("delta")
         .mode("overwrite")
         .option("overwriteSchema", "true")
-        .saveAsTable(paths["output_table"])
     )
+    if cols:
+        writer = writer.clusterBy(*cols)
+    writer.saveAsTable(paths["output_table"])
     log.info("Batch write complete → %s", paths["output_table"])
