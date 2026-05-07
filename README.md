@@ -1,10 +1,7 @@
 # alo-lakehouse
 
-Alo Yoga's Databricks Lakehouse — dbt project managing the medallion data platform
-(bronze → silver → gold) on **Databricks + Unity Catalog**.
-
-> Uses `dbt-databricks` with separate dev and prod Databricks workspaces, Unity Catalog
-> for governance, and Databricks Workflows for orchestration.
+Alo Yoga's Databricks Lakehouse — project managing the medallion data platform
+(bronze → silver → gold) on **Databricks + Unity Catalog**. This project enable developers run dbt+SparkSQL, dbt+PySpark and classic PySpark jobs 
 
 ---
 
@@ -19,7 +16,7 @@ operational stores.
 ┌─────────────────────────────────┐
 │         Source Systems          │
 │  Shopify · OMS · Anaplan · GA4  │
-│  Braze · Salesforce · FiveTran  │
+│  Braze · Salesforce · Aftership │
 └────────────┬────────────────────┘
              │
      ┌───────▼────────┐
@@ -44,13 +41,18 @@ operational stores.
      ┌───────▼────────────────────────────────────────┐
      │               Unity Catalog                    │
      │                                                │
-     │  ┌──────────┐  ┌──────────┐  ┌──────────────┐ │
-     │  │  Bronze  │─▶│  Silver  │─▶│     Gold     │ │
-     │  │ Raw Data │  │   3NF    │  │ Star Schema  │ │
-     │  │          │  │ Modeling │  │  BI-Ready    │ │
-     │  └──────────┘  └──────────┘  └──────┬───────┘ │
-     └──────────────────────────────────────┼─────────┘
-                                            │ (optional)
+     │  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
+     │  │  Bronze  │─▶│  Silver  │─▶│     Gold     │  │
+     │  │ Raw Data │  │   3NF    │  │ Star Schema  │  │
+     │  │          │  │ Modeling │  │  BI-Ready    │  │
+     │  └──────────┘  └──────────┘  └──────┬───────┘  │
+     └──────────────────────────────────────--┼───────┘
+                                              │ (optional)
+                                      ┌───────▼────────┐
+                                      │  Consumption   │
+                                      │  (Redshift,    │
+                                      │   Dynamo etc)  │
+                                      └───────-────────┘                             
 ```
 
 | Layer | Tool | Purpose |
