@@ -1,6 +1,6 @@
 {
   "name": "shopify-lineitems-ingest",
-  "description": "AutoLoader streaming ingest for Shopify GraphQL Line Items API v2 → alo_dev.bronze.shopify_gq_lineitems_v2",
+  "description": "AutoLoader streaming ingest for Shopify GraphQL Line Items API v2 \u2192 alo_dev.bronze.shopify_gq_lineitems_v2",
   "tags": {
     "project": "alo-lakehouse",
     "layer": "bronze",
@@ -14,7 +14,9 @@
   "max_concurrent_runs": 1,
   "timeout_seconds": 1800,
   "email_notifications": {
-    "on_failure": ["mallik.bathula@aloyoga.com"],
+    "on_failure": [
+      "mallik.bathula@aloyoga.com"
+    ],
     "no_alert_for_skipped_runs": false
   },
   "environments": [
@@ -22,7 +24,9 @@
       "environment_key": "ingest_env",
       "spec": {
         "client": "2",
-        "dependencies": ["pyyaml"]
+        "dependencies": [
+          "pyyaml"
+        ]
       }
     }
   ],
@@ -34,7 +38,12 @@
       "spark_python_task": {
         "python_file": "lakehouse/ingestions/shopify/shopify_lineitems.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+        "parameters": [
+          "--run-mode",
+          "streaming",
+          "--source-catalog",
+          "alo_dev"
+        ]
       }
     }
   ],

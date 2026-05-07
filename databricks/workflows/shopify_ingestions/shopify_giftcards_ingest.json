@@ -1,6 +1,6 @@
 {
   "name": "shopify-giftcards-ingest",
-  "description": "AutoLoader streaming ingest for Shopify GraphQL Gift Cards API → alo_dev.bronze.shopify_gq_giftcards",
+  "description": "AutoLoader streaming ingest for Shopify GraphQL Gift Cards API \u2192 alo_dev.bronze.shopify_gq_giftcards",
   "tags": {
     "project": "alo-lakehouse",
     "layer": "bronze",
@@ -14,7 +14,9 @@
   "max_concurrent_runs": 1,
   "timeout_seconds": 1800,
   "email_notifications": {
-    "on_failure": ["mallik.bathula@aloyoga.com"],
+    "on_failure": [
+      "mallik.bathula@aloyoga.com"
+    ],
     "no_alert_for_skipped_runs": false
   },
   "environments": [
@@ -22,7 +24,9 @@
       "environment_key": "ingest_env",
       "spec": {
         "client": "2",
-        "dependencies": ["pyyaml"]
+        "dependencies": [
+          "pyyaml"
+        ]
       }
     }
   ],
@@ -34,7 +38,12 @@
       "spark_python_task": {
         "python_file": "lakehouse/ingestions/shopify/shopify_giftcards.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+        "parameters": [
+          "--run-mode",
+          "streaming",
+          "--source-catalog",
+          "alo_dev"
+        ]
       }
     }
   ],

@@ -16,7 +16,9 @@
   "max_concurrent_runs": 1,
   "timeout_seconds": 3600,
   "email_notifications": {
-    "on_failure": ["mallik.bathula@aloyoga.com"],
+    "on_failure": [
+      "mallik.bathula@aloyoga.com"
+    ],
     "no_alert_for_skipped_runs": false
   },
   "environments": [
@@ -24,7 +26,9 @@
       "environment_key": "ingest_env",
       "spec": {
         "client": "2",
-        "dependencies": ["pyyaml"]
+        "dependencies": [
+          "pyyaml"
+        ]
       }
     }
   ],
@@ -36,7 +40,12 @@
       "spark_python_task": {
         "python_file": "lakehouse/ingestions/shopify/shopify_orders.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+        "parameters": [
+          "--run-mode",
+          "streaming",
+          "--source-catalog",
+          "alo_dev"
+        ]
       }
     },
     {
@@ -46,7 +55,12 @@
       "spark_python_task": {
         "python_file": "lakehouse/ingestions/shopify/shopify_customers.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+        "parameters": [
+          "--run-mode",
+          "streaming",
+          "--source-catalog",
+          "alo_dev"
+        ]
       }
     },
     {
@@ -56,7 +70,12 @@
       "spark_python_task": {
         "python_file": "lakehouse/ingestions/shopify/shopify_products.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+        "parameters": [
+          "--run-mode",
+          "streaming",
+          "--source-catalog",
+          "alo_dev"
+        ]
       }
     },
     {
@@ -66,7 +85,12 @@
       "spark_python_task": {
         "python_file": "lakehouse/ingestions/shopify/shopify_collections.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+        "parameters": [
+          "--run-mode",
+          "streaming",
+          "--source-catalog",
+          "alo_dev"
+        ]
       }
     },
     {
@@ -76,7 +100,12 @@
       "spark_python_task": {
         "python_file": "lakehouse/ingestions/shopify/shopify_giftcards.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+        "parameters": [
+          "--run-mode",
+          "streaming",
+          "--source-catalog",
+          "alo_dev"
+        ]
       }
     },
     {
@@ -86,51 +115,92 @@
       "spark_python_task": {
         "python_file": "lakehouse/ingestions/shopify/shopify_locations.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+        "parameters": [
+          "--run-mode",
+          "streaming",
+          "--source-catalog",
+          "alo_dev"
+        ]
       }
     },
     {
       "task_key": "transactions",
       "description": "Shopify Transactions -> shopify_gq_transactions",
-      "depends_on": [{"task_key": "orders"}],
+      "depends_on": [
+        {
+          "task_key": "orders"
+        }
+      ],
       "environment_key": "ingest_env",
       "spark_python_task": {
         "python_file": "lakehouse/ingestions/shopify/shopify_transactions.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+        "parameters": [
+          "--run-mode",
+          "streaming",
+          "--source-catalog",
+          "alo_dev"
+        ]
       }
     },
     {
       "task_key": "refunds",
       "description": "Shopify Refunds -> shopify_gq_refunds",
-      "depends_on": [{"task_key": "orders"}],
+      "depends_on": [
+        {
+          "task_key": "orders"
+        }
+      ],
       "environment_key": "ingest_env",
       "spark_python_task": {
         "python_file": "lakehouse/ingestions/shopify/shopify_refunds.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+        "parameters": [
+          "--run-mode",
+          "streaming",
+          "--source-catalog",
+          "alo_dev"
+        ]
       }
     },
     {
       "task_key": "lineitems",
       "description": "Shopify Line Items -> shopify_gq_lineitems",
-      "depends_on": [{"task_key": "orders"}],
+      "depends_on": [
+        {
+          "task_key": "orders"
+        }
+      ],
       "environment_key": "ingest_env",
       "spark_python_task": {
         "python_file": "lakehouse/ingestions/shopify/shopify_lineitems.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+        "parameters": [
+          "--run-mode",
+          "streaming",
+          "--source-catalog",
+          "alo_dev"
+        ]
       }
     },
     {
       "task_key": "fulfillments",
       "description": "Shopify Fulfillments -> shopify_gq_fulfillments",
-      "depends_on": [{"task_key": "orders"}],
+      "depends_on": [
+        {
+          "task_key": "orders"
+        }
+      ],
       "environment_key": "ingest_env",
       "spark_python_task": {
         "python_file": "lakehouse/ingestions/shopify/shopify_fulfillments.py",
         "source": "GIT",
-        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+        "parameters": [
+          "--run-mode",
+          "streaming",
+          "--source-catalog",
+          "alo_dev"
+        ]
       }
     }
   ],
