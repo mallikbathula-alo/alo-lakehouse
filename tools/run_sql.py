@@ -1,10 +1,29 @@
 """
-Execute a SQL file against Databricks, statement by statement.
-Credentials are read from ~/.dbt/profiles.yml (lakehouse → local target).
+run_sql.py — Execute a SQL file against Databricks, statement by statement.
 
-Usage:
+Purpose
+-------
+Databricks SQL Warehouses do not accept multi-statement queries in a single
+request. This script splits a SQL file on semicolons and executes each
+statement individually, making it possible to run setup scripts that contain
+multiple DDL/DML statements (CREATE CATALOG, CREATE SCHEMA, GRANT, etc.)
+from the command line without copy-pasting into the Databricks SQL editor.
+
+Primary use case: applying Unity Catalog setup files under databricks/permissions/
+  - databricks/permissions/dev_workspace_setup.sql   — dev catalog, schemas, grants
+  - databricks/permissions/prod_workspace_setup.sql  — prod catalog, schemas, grants
+
+Credentials are read from ~/.dbt/profiles.yml (lakehouse → local target).
+Account-level operations (storage credentials, external locations) must still
+be run via the Databricks CLI — this script only covers workspace-level SQL.
+
+Usage
+-----
+    just run-sql databricks/permissions/dev_workspace_setup.sql
+    just run-sql databricks/permissions/prod_workspace_setup.sql
+
+    # or directly:
     uv run python tools/run_sql.py <path/to/file.sql>
-    just run-sql databricks/permissions/unity_catalog_setup_dev.sql
 """
 
 import sys
