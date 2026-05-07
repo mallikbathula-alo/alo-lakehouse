@@ -90,10 +90,10 @@ tag type:
 tag-with-release-doc type env="dev":
     cd tools/cd && ./tag_with_release_doc.sh "{{type}}" "{{env}}"
 
-generate-release-notes env previous_tag="" latest_tag="": (ecr-login env)
+generate-release-notes env previous_tag="" latest_tag="":
     cd tools/cd && ./release_doc.sh "{{env}}" "{{previous_tag}}" "{{latest_tag}}"
 
-upload-release-notes env: (ecr-login env)
+upload-release-notes env:
     aws s3 cp ./release_notes s3://alo-{{env}}-de-docs/release_notes --recursive \
         --profile alo-is-{{env}}
 
