@@ -3,17 +3,66 @@ ingest_utils.py
 ───────────────
 Shopify GraphQL AutoLoader ingestion helpers.
 Specific to the AutoLoader pipeline pattern — path conventions, CLI args,
-streaming/batch runners.
+streaming and batch runners.
 
 Generic utilities (get_logger, get_spark, get_script_dir, dedup, preview_table)
-are in spark_utils.py and re-exported here for backward compatibility with
-existing ingest scripts.
+live in spark_utils.py and are re-exported here so existing ingest scripts
+need only one import.
 
 Usage in each ingest script:
     from ingest_utils import (
         get_logger, get_spark, parse_ingest_args,
         build_paths, dedup, run_streaming, run_batch, preview_table,
     )
+
+────────────────────────────────────────────────────────────────────────────────
+Streaming Runner  (run_streaming)
+────────────────────────────────────────────────────────────────────────────────
+Uses Databricks AutoLoader (cloudFiles) with Structured Streaming.
+
+Flow:
+  S3 JSON files → AutoLoader readStream → foreachBatch(_process_micro_batch)
+                → transform_fn → Delta table (append)
+
+Key behaviours:
+  • trigger(availableNow=True) — processes all new files since the last
+    checkpoint, then terminates. Behaves like an incremental batch job
+    while retaining full AutoLoader state (schema evolution, file tracking).
+  • Checkpoint: persisted in Unity Catalog Volumes
+    (/Volumes/<catalog>/bronze/_autoloader_checkpoints/<dataset>).
+    Tracks exactly which S3 files have been processed — safe to re-run
+    without reprocessing already-ingested data.
+  • Schema enforcement: StructType passed as ingest_schema; inferColumnTypes
+    disabled to prevent type drift across runs.
+  • mergeSchema: enabled so new fields added by Shopify GraphQL API are
+    automatically absorbed without requiring a full refresh.
+  • Liquid clustering: applied on write via .clusterBy("created_at",
+    "updated_at") for faster downstream queries on date-range filters.
+
+When to use:
+  Production Databricks Workflow runs (spark_python_task). All 10 Shopify
+  ingest scripts default to run_mode="streaming" in production.
+
+────────────────────────────────────────────────────────────────────────────────
+Batch Runner  (run_batch)
+────────────────────────────────────────────────────────────────────────────────
+Stateless full read — no checkpoint, no streaming state.
+
+Flow:
+  S3 JSON files → spark.read (static) → transform_fn
+               → Delta table (overwrite)
+
+Key behaviours:
+  • Reads all files in source_path in a single static DataFrame scan.
+    Use source_date (yyyy/mm/dd) to limit the scan to a specific day.
+  • Overwrites the output table completely — suitable for local testing
+    and one-off backfills, not for incremental production ingest.
+  • overwriteSchema: enabled so schema changes don't block the write.
+  • Liquid clustering: same defaults as run_streaming.
+
+When to use:
+  Local development and testing via Databricks Connect
+  (just pyspark-run <script>). Not used in production workflows.
 """
 
 from __future__ import annotations
