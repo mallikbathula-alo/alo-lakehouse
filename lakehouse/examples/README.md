@@ -1,19 +1,25 @@
 # lakehouse/examples/
 
-Reference examples for developers learning SparkSQL and PySpark transformations
-in this dbt + Databricks project.
+Reference examples for developers learning SparkSQL and PySpark in this
+dbt + Databricks project. All examples are **self-contained** — no catalog
+tables or external sources required.
 
-These models are **disabled by default** (`enabled: false`) — they will not run
-as part of the normal pipeline. Enable them explicitly to experiment.
+There are two types of examples:
+
+- **dbt models** (`sparksql_incremental.sql`, `pyspark_transform.py`) — run via `dbt run`;
+  disabled by default (`enabled: false`) so they never run in the pipeline
+- **Standalone PySpark scripts** (`explore_catalog.py`) — run via `just pyspark-run`;
+  connect to the Databricks cluster via Databricks Connect
 
 ---
 
 ## Files
 
-| File | Demonstrates |
-|------|-------------|
-| `sparksql_incremental.sql` | SparkSQL incremental model — VALUES sample data, merge strategy, `is_incremental()`, casting, CASE, `cluster_by` |
-| `pyspark_transform.py` | dbt Python model — inline sample data, `withColumn()`, window dedup, type casting, conditional logic, null handling |
+| File | Type | Demonstrates |
+|------|------|-------------|
+| `sparksql_incremental.sql` | dbt SQL model | SparkSQL incremental merge — VALUES data, `is_incremental()`, casting, CASE, `cluster_by` |
+| `pyspark_transform.py` | dbt Python model | PySpark DataFrame API — inline data, `withColumn()`, window dedup, type casting, conditional logic |
+| `explore_catalog.py` | Standalone PySpark script | Databricks Connect — `spark.range()`, `createDataFrame()`, `spark.sql()`, DataFrame aggregations |
 
 ---
 
@@ -86,6 +92,32 @@ dbt run --select pyspark_transform --target local
 
 > Python models execute on the Databricks cluster (not locally). The cluster must
 > be running. Check `DATABRICKS_CLUSTER_ID` in `.env`.
+
+---
+
+## explore_catalog.py
+
+Standalone PySpark script — runs locally via Databricks Connect, compute executes
+on the cluster. Demonstrates the full development loop without needing any specific
+catalog tables.
+
+Key patterns:
+- `get_spark()` — shared session factory from `lakehouse/utils/session.py`
+- `spark.sql("SHOW SCHEMAS / TABLES")` — catalog exploration
+- `spark.range(1, 6)` — generate a sequence DataFrame, no source needed
+- `spark.createDataFrame(rows, schema)` — typed inline data
+- `withColumn()`, `filter()`, `groupBy().agg()` — DataFrame transformations
+- `spark.table("catalog.schema.table")` — read a real Delta table (commented out)
+
+### Run it
+
+```bash
+just pyspark-run explore_catalog.py
+# or directly:
+cd lakehouse && ../.venv/bin/python examples/explore_catalog.py
+```
+
+> Requires the Databricks cluster to be running and `DATABRICKS_CLUSTER_ID` set in `.env`.
 
 ---
 

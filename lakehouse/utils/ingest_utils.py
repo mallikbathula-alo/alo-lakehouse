@@ -76,23 +76,18 @@ def get_spark(script_dir: str | None = None):
         handles Unity Catalog auth — no credentials needed.
 
     Local (Databricks Connect):
-        Loads pyspark/utils/session.py which reads host/token from .env and
-        ~/.dbt/profiles.yml and connects via gRPC.
-        script_dir must be the shopify_ingestions/ directory so we can locate
-        the pyspark/ package four levels up.
+        Uses lakehouse/utils/session.py (same package) which reads host/token
+        from .env and ~/.dbt/profiles.yml and connects via gRPC.
     """
     if os.environ.get("DATABRICKS_RUNTIME_VERSION"):
         from pyspark.sql import SparkSession
         return SparkSession.builder.getOrCreate()
 
-    if script_dir is None:
-        script_dir = get_script_dir()
-
     import sys
-    pyspark_dir = os.path.abspath(os.path.join(script_dir, "../../../../pyspark"))
-    if pyspark_dir not in sys.path:
-        sys.path.insert(0, pyspark_dir)
-    from utils.session import get_spark as _connect
+    utils_dir = os.path.dirname(os.path.abspath(__file__))
+    if utils_dir not in sys.path:
+        sys.path.insert(0, utils_dir)
+    from session import get_spark as _connect
     return _connect()
 
 

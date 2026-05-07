@@ -72,10 +72,11 @@ run-full-refresh-prod-local model:
 # Requires: .env with DATABRICKS_CLUSTER_ID
 
 pyspark-run script:
-    cd lakehouse/pyspark && ../../.venv/bin/python {{script}}
+    cd lakehouse && ../.venv/bin/python examples/{{script}}
 
 pyspark-shell:
-    cd lakehouse/pyspark && ../../.venv/bin/python -c "\
+    cd lakehouse && ../.venv/bin/python -c "\
+        import sys; sys.path.insert(0, 'utils'); \
         from utils.session import get_spark; \
         spark = get_spark(); \
         print('SparkSession ready — use spark.<tab>'); \

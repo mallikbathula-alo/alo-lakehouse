@@ -25,8 +25,8 @@ import yaml
 from databricks.connect import DatabricksSession
 from dotenv import load_dotenv
 
-# Load .env from repo root (three levels up from lakehouse/pyspark/utils/)
-_repo_root = Path(__file__).resolve().parents[3]
+# Load .env from repo root (two levels up from lakehouse/utils/)
+_repo_root = Path(__file__).resolve().parents[2]
 load_dotenv(_repo_root / ".env")
 
 

@@ -170,7 +170,7 @@ All dependencies — dbt, databricks-connect, and PySpark utils — share a **si
 > Current cluster: **DBR 15.4** → `databricks-connect==15.4.x`.
 > When upgrading the cluster runtime, update `databricks-connect` in `pyproject.toml` to match.
 
-PySpark scripts live in `lakehouse/pyspark/` alongside dbt models.
+PySpark scripts live in `lakehouse/examples/` alongside dbt models.
 
 ---
 
@@ -277,7 +277,7 @@ def model(dbt, spark):
     return df.withColumn(...)                # runs on cluster, result in Unity Catalog
 ```
 
-### Use standalone PySpark scripts (`lakehouse/pyspark/`) when:
+### Use standalone PySpark scripts (`lakehouse/examples/`) when:
 
 | Scenario | Reason |
 |----------|--------|
@@ -288,7 +288,7 @@ def model(dbt, spark):
 | One-off data fixes or backfills | Shouldn't be in the dbt DAG permanently |
 
 ```python
-# lakehouse/pyspark/my_analysis.py
+# lakehouse/examples/my_analysis.py
 spark = get_spark()
 df = spark.table("alo_dev.bronze.br_shopify_us_orders")
 df.filter(...).show()                        # explore only, nothing persisted
@@ -303,7 +303,7 @@ df.filter(...).show()                        # explore only, nothing persisted
 
 ## PySpark — Sample Runs
 
-PySpark scripts in `lakehouse/pyspark/` use **Databricks Connect** — code runs locally,
+PySpark scripts in `lakehouse/examples/` use **Databricks Connect** — code runs locally,
 compute runs on your Databricks cluster.
 
 > The cluster must be **running** before connecting. DATABRICKS_CLUSTER_ID must be set in `.env`.
@@ -345,7 +345,7 @@ just pyspark-shell
 
 ### Write a custom PySpark script
 
-Create `lakehouse/pyspark/my_analysis.py`:
+Create `lakehouse/examples/my_analysis.py`:
 ```python
 from utils.session import get_spark
 
@@ -431,7 +431,7 @@ just run-prod-local <model>             # Run using prod catalog as source
 just run-full-refresh-local <model>     # Full refresh locally
 just get-manifest dev                   # Fetch latest manifest from S3
 
-# PySpark (scripts live in lakehouse/pyspark/)
+# PySpark (scripts live in lakehouse/examples/)
 just pyspark-run <script>               # Run a PySpark script via Databricks Connect
 just pyspark-shell                      # Interactive SparkSession
 
@@ -544,9 +544,13 @@ alo-lakehouse/
 │   │   ├── holiday_calendar/           # Holiday calendar data
 │   │   └── public/                     # General reference tables (e.g. test_products)
 │   ├── tests/                          # Custom generic tests
-│   └── pyspark/
-│       ├── utils/session.py            # get_spark() — Databricks Connect session
-│       └── examples/explore_catalog.py # Sample catalog explorer
+│   ├── utils/
+│   │   ├── session.py                  # get_spark() — Databricks Connect session factory
+│   │   └── ingest_utils.py             # Shared AutoLoader ingest helpers (logging, paths, dedup)
+│   └── examples/                       # Developer reference examples (see examples/README.md)
+│       ├── sparksql_incremental.sql    # SparkSQL incremental dbt model (self-contained)
+│       ├── pyspark_transform.py        # PySpark dbt Python model (self-contained)
+│       └── explore_catalog.py          # Standalone Databricks Connect script
 ├── .env.example                        # PySpark env var template (copy to .env)
 ├── .pre-commit-config.yaml
 ├── .sqlfluff                           # sparksql dialect

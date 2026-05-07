@@ -11,7 +11,8 @@ try:
 except NameError:
     import inspect as _inspect
     _script_dir = _os.path.dirname(_os.path.realpath(_inspect.getfile(_inspect.currentframe())))
-for _p in [_script_dir, _os.path.join(_script_dir, "schema")]:
+_utils_dir = _os.path.abspath(_os.path.join(_script_dir, "../../../utils"))
+for _p in [_script_dir, _os.path.join(_script_dir, "schema"), _utils_dir]:
     if _p not in _sys.path:
         _sys.path.insert(0, _p)
 
