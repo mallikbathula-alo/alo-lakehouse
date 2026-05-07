@@ -51,11 +51,6 @@ operational stores.
      │  └──────────┘  └──────────┘  └──────┬───────┘ │
      └──────────────────────────────────────┼─────────┘
                                             │ (optional)
-                              ┌─────────────▼──────────────┐
-                              │     Consumption Layer       │
-                              │  Redshift · DynamoDB ·      │
-                              │  PostgreSQL · Thoughtspot   │
-                              └────────────────────────────┘
 ```
 
 | Layer | Tool | Purpose |
@@ -64,7 +59,6 @@ operational stores.
 | **Bronze** | Databricks AutoLoader (`cloudFiles`) | Raw data landed as Delta tables, schema-on-read |
 | **Silver** | dbt (SparkSQL) | Deduplication, 3NF modeling, business logic |
 | **Gold** | dbt (SparkSQL) | Star schema aggregations, BI-ready fact/dim tables |
-| **Consumption** | dbt / custom scripts | Optional push to Redshift, DynamoDB, PostgreSQL |
 
 ---
 
@@ -303,7 +297,7 @@ df.filter(...).show()                        # explore only, nothing persisted
 > **Rule:** If the output is a table that other models or BI tools depend on → dbt Python model.
 > If it's exploratory, ML, streaming, or a one-off → standalone script.
 > Don't use standalone scripts to produce production tables — you lose lineage, testing,
-> documentation, and Monte Carlo monitoring.
+> and documentation.
 
 ---
 
@@ -483,22 +477,16 @@ See [`databricks/permissions/README.md`](databricks/permissions/README.md) for t
 PR opened
   └── Linting (sqlfmt + sqlfluff + ruff + pre-commit-dbt)
   └── dbt validate (--defer --select state:modified+1 against dev workspace)
-  └── Monte Carlo dry-run (if montecarlo/ changed)
 
 PR labeled "ready for deployment" + approved review
   └── Deploy to dev workspace
         ├── dbt docs + manifest → S3
-        ├── Docker image → ECR (dev)
-        ├── DAG → MWAA S3 (dev)
         └── Databricks Workflows upsert (dev)
 
 git tag v*.*.*
   └── Deploy to prod workspace
         ├── dbt docs + manifest → S3
-        ├── Docker image → ECR (prod)
-        ├── DAG → MWAA S3 (prod)
-        ├── Databricks Workflows upsert (prod)
-        └── Monte Carlo monitors apply
+        └── Databricks Workflows upsert (prod)
 ```
 
 ---
@@ -530,9 +518,6 @@ alo-lakehouse/
 │       ├── dev_workspace_setup.sql     # Dev catalog, schemas, grants
 │       ├── prod_account_setup.sh       # Prod storage credential + external location
 │       └── prod_workspace_setup.sql    # Prod catalog, schemas, grants
-├── jobs/
-│   └── alo-lakehouse.py                # Airflow DAG (MWAA)
-├── montecarlo/                         # Data quality monitor definitions
 ├── scripts/
 │   ├── setup.sh                        # Local dev bootstrap (all prerequisites)
 │   ├── run_sql.py                      # SQL file runner for setup scripts
@@ -564,7 +549,6 @@ alo-lakehouse/
 ├── .env.example                        # PySpark env var template (copy to .env)
 ├── .pre-commit-config.yaml
 ├── .sqlfluff                           # sparksql dialect
-├── Dockerfile
 ├── Justfile
 └── pyproject.toml                      # dbt-databricks 1.10.19 + databricks-connect 15.4.21
 ```
@@ -573,9 +557,8 @@ alo-lakehouse/
 
 ## Data Quality
 
-[Monte Carlo](https://www.montecarlodata.com/) monitors in `montecarlo/` cover freshness,
-volume anomaly detection, schema changes, and metric anomalies.
-Alerts route to `#de-incident` and `#de-oncall-support` Slack channels.
+Data quality is enforced via `dbt test` — generic and custom tests defined alongside models
+in YAML properties files. Tests run as part of the CI/CD pipeline after every deployment.
 
 ---
 
@@ -588,4 +571,3 @@ Alerts route to `#de-incident` and `#de-oncall-support` Slack channels.
 
 Secrets in AWS Secrets Manager:
 - `alo/databricks/{env}` → `{"host": ..., "http_path": ..., "token": ...}`
-- `alo/montecarlo` → `{"api_id": ..., "api_token": ...}`

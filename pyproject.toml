@@ -10,7 +10,6 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0.0",
     "rust-just>=1.40.0",
-    "montecarlodata==0.124.0",
 ]
 
 [dependency-groups]

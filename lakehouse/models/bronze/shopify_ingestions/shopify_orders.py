@@ -1,8 +1,7 @@
 # ============================================================
 ## ─────────────────────────────────────────────────────────────
-#  Transforms for the Shopify Orders GraphQL API v2 response.
-#  Mirrors the dbt 'is-redshift/warehouse/models/1_bronze/shopify-graphql-kinesis/br_gq_shopify_order.sql'
-#  CTE, selecting and casting fields to match the final dbt model schema.
+#  Shopify Orders GraphQL -> bronze.shopify_gq_orders
+#  Transforms and flattens the Shopify Orders GraphQL API response.
 ## ─────────────────────────────────────────────────────────────
 
 import os as _os
@@ -55,7 +54,7 @@ def transform_unpack(df):
         d["name"].cast("string").alias("name"),
 
         # order_number: matches the CASE WHEN in the unpack CTE
-        # (split_part is 1-indexed in Redshift; split() is 0-indexed in Spark)
+        # (split() is 0-indexed in Spark)
         when(d["number"].isNotNull(), d["number"])
             .when(lower(d["name"]).startswith("exchl"),      split(d["name"], "-")[1])
             .when(lower(d["name"]).startswith("lgc-exchl"),  split(d["name"], "-")[2])
@@ -168,7 +167,7 @@ def transform_unpack(df):
         col("platform"),
         d["id"].cast("string").alias("unique_key"),
 
-        # ── Audit (replaces Redshift loaded_at) ───────────────
+        # ── Audit ─────────────────────────────────────────────
         current_timestamp().alias("_ingested_at"),
         col("_metadata.file_path").alias("_source_file"),   # input_file_name() not supported in UC
     )

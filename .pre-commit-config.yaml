@@ -6,7 +6,7 @@ repos:
       - id: sqlfmt
         name: sql-format
         language_version: python
-        files: '^lakehouse/(models/(1_bronze|2_silver_pre|3_silver|4_silver_post|5_gold|mgt|c360)|snapshots)/.*\.sql$'
+        files: '^lakehouse/(models/(bronze|silver|gold|mgt|c360)|snapshots)/.*\.sql$'
         args:
           [
             --exclude,
@@ -25,7 +25,7 @@ repos:
         entry: sqlfluff fix --show-lint-violations --processes 0 --disable-progress-bar
         language: python
         types: [sql]
-        files: '^lakehouse/(models/(1_bronze|2_silver_pre|3_silver|4_silver_post|5_gold|mgt|c360)|snapshots)/.*\.sql$'
+        files: '^lakehouse/(models/(bronze|silver|gold|mgt|c360)|snapshots)/.*\.sql$'
         require_serial: true
         additional_dependencies: ["dbt-databricks==1.9.4", "sqlfluff-templater-dbt"]
 
@@ -49,19 +49,19 @@ repos:
     rev: v2.0.3
     hooks:
       - id: dbt-parse
-        files: '^lakehouse/models/(1_bronze|2_silver_pre|3_silver|4_silver_post|5_gold|mgt|c360)/.*\.sql$'
+        files: '^lakehouse/models/(bronze|silver|gold|mgt|c360)/.*\.sql$'
 
       - id: check-model-has-properties-file
         name: Check that all models are listed in a YAML file
-        files: '^lakehouse/models/(1_bronze|2_silver_pre|3_silver|4_silver_post|5_gold|mgt|c360)/.*\.sql$'
+        files: '^lakehouse/models/(bronze|silver|gold|mgt|c360)/.*\.sql$'
 
       - id: check-script-ref-and-source
         name: Check scripts have ref and source
-        files: '^lakehouse/models/(1_bronze|2_silver_pre|3_silver|4_silver_post|5_gold|mgt|c360)/.*\.sql$'
+        files: '^lakehouse/models/(bronze|silver|gold|mgt|c360)/.*\.sql$'
 
       - id: check-model-tags
         name: Check model tags
-        files: '^lakehouse/models/(1_bronze|2_silver_pre|3_silver|4_silver_post|5_gold|mgt|c360)/.*\.sql$'
+        files: '^lakehouse/models/(bronze|silver|gold|mgt|c360)/.*\.sql$'
         args:
           - "--tags"
           - "bronze"

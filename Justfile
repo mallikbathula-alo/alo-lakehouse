@@ -1,6 +1,5 @@
 export aws_prod   := "715192338314"
 export aws_dev    := "206390103201"
-export tag        := "latest"
 export git_commit_sha := `git rev-parse --short HEAD 2>/dev/null || echo 'unknown'`
 export root       := `pwd`
 
@@ -13,14 +12,9 @@ setup:
     ./scripts/setup.sh
 
 # ── Authentication ─────────────────────────────────────────────────────────────
-# Login to AWS via SSO and authenticate Docker to ECR
-# (No StrongDM needed — Databricks connects over HTTPS using PAT / service principal)
 
-ecr-login env:
-    aws sso login --profile alo-is-{{env}} || true
-    aws ecr get-login-password --region us-east-1 --profile alo-is-{{env}} | \
-        docker login --username AWS --password-stdin \
-        "$aws_{{env}}.dkr.ecr.us-east-1.amazonaws.com"
+aws-login env:
+    aws sso login --profile alo-is-{{env}}
 
 # ── Manifest fetch ─────────────────────────────────────────────────────────────
 
@@ -28,26 +22,10 @@ get-manifest env="dev":
     aws s3 cp s3://alo-{{env}}-de-docs/manifest.json ./lakehouse/target/manifest.json \
         --profile alo-is-{{env}}
 
-# ── Docker ─────────────────────────────────────────────────────────────────────
-
-build env: (ecr-login env)
-    cp ./scripts/templates/profiles.yml.txt ./profiles.yml
-    docker build \
-        --platform linux/x86_64 \
-        --build-arg env={{env}} \
-        -t alo-lakehouse:$tag \
-        -t $aws_{{env}}.dkr.ecr.us-east-1.amazonaws.com/alo-lakehouse:$tag \
-        .
-
-push env: (build env)
-    docker push $aws_{{env}}.dkr.ecr.us-east-1.amazonaws.com/alo-lakehouse:$tag
-
-deploy-docker env tag="latest":
-    just tag=$tag push {{env}}
-
 # ── dbt Docs & Manifest ────────────────────────────────────────────────────────
 
-deploy-dbt-docs-manifest env: (ecr-login env)
+deploy-dbt-docs-manifest env:
+    aws sso login --profile alo-is-{{env}} || true
     cd lakehouse && \
     uv run dbt deps && \
     uv run dbt docs generate --target {{env}} --vars '{"source_catalog": "alo_{{env}}"}' && \
