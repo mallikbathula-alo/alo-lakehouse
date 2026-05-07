@@ -6,13 +6,21 @@ Not specific to any ingestion pipeline — safe to import from any context.
 
 Compatible with:
   - Databricks cluster (spark_python_task, notebook, dbt Python model)
-  - Local Databricks Connect (standalone scripts via utils/session.py)
+  - Local Databricks Connect (standalone scripts, examples)
+
+Credential resolution for local runs (first wins):
+  1. DATABRICKS_HOST / DATABRICKS_TOKEN env vars
+  2. ~/.dbt/profiles.yml  (lakehouse → local target)
+
+Compute mode for local runs (set in .env):
+  - Serverless (preferred): DATABRICKS_SERVERLESS_COMPUTE_ID=auto
+  - Classic cluster:        DATABRICKS_CLUSTER_ID=<cluster-id>
 
 Exports
 -------
     get_logger(name)                → logging.Logger
     get_script_dir()                → str
-    get_spark(script_dir)           → SparkSession
+    get_spark()                     → SparkSession
     dedup(df, *order_cols)          → DataFrame
     preview_table(spark, table, n)  → None
 """
@@ -21,6 +29,7 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -51,8 +60,7 @@ def get_script_dir() -> str:
 
     On Databricks cluster, spark_python_task executes the file via exec() so
     __file__ may not be defined. We walk up the call stack to find the first
-    frame that has a __file__ in its globals (the actual script being run),
-    then fall back to inspect if nothing is found.
+    frame that has a __file__ in its globals (the actual script being run).
     """
     import inspect
     frame = inspect.currentframe()
@@ -72,30 +80,100 @@ def get_script_dir() -> str:
     )
 
 
+# ── Credentials (local only) ──────────────────────────────────────────────────
+
+def _load_env() -> None:
+    """Load .env from repo root (two levels up from lakehouse/utils/)."""
+    try:
+        from dotenv import load_dotenv
+        repo_root = Path(__file__).resolve().parents[2]
+        load_dotenv(repo_root / ".env")
+    except ImportError:
+        pass  # dotenv not available on cluster; env vars already set
+
+
+def _read_dbt_profiles() -> dict:
+    """Parse ~/.dbt/profiles.yml and return the lakehouse local target config."""
+    try:
+        import yaml
+    except ImportError:
+        return {}
+    profiles_path = Path.home() / ".dbt" / "profiles.yml"
+    if not profiles_path.exists():
+        return {}
+    with open(profiles_path) as f:
+        profiles = yaml.safe_load(f)
+    try:
+        return profiles["lakehouse"]["outputs"]["local"]
+    except (KeyError, TypeError):
+        return {}
+
+
 # ── SparkSession ──────────────────────────────────────────────────────────────
 
-def get_spark(script_dir: str | None = None):
+def get_spark():
     """
     Returns a SparkSession appropriate for the current execution context.
 
     Cluster (DATABRICKS_RUNTIME_VERSION is set):
-        Uses SparkSession.builder.getOrCreate(). The cluster's service principal
-        handles Unity Catalog auth — no credentials needed.
+        SparkSession.builder.getOrCreate() — cluster service principal handles
+        Unity Catalog auth, no credentials needed.
 
     Local (Databricks Connect):
-        Uses lakehouse/utils/session.py which reads host/token from .env and
-        ~/.dbt/profiles.yml and connects via serverless or classic cluster.
+        Reads host/token from .env or ~/.dbt/profiles.yml.
+        Compute mode controlled by .env:
+          - DATABRICKS_SERVERLESS_COMPUTE_ID=auto  → serverless, no cluster needed
+          - DATABRICKS_CLUSTER_ID=<id>             → classic cluster, must be running
     """
     if os.environ.get("DATABRICKS_RUNTIME_VERSION"):
         from pyspark.sql import SparkSession
         return SparkSession.builder.getOrCreate()
 
-    import sys
-    utils_dir = os.path.dirname(os.path.abspath(__file__))
-    if utils_dir not in sys.path:
-        sys.path.insert(0, utils_dir)
-    from session import get_spark as _connect
-    return _connect()
+    # Local — Databricks Connect
+    from databricks.connect import DatabricksSession
+
+    _load_env()
+    dbt = _read_dbt_profiles()
+
+    host  = os.environ.get("DATABRICKS_HOST") or dbt.get("host")
+    token = os.environ.get("DATABRICKS_TOKEN") or dbt.get("token")
+
+    serverless_id = os.environ.get("DATABRICKS_SERVERLESS_COMPUTE_ID")
+    cluster_id    = os.environ.get("DATABRICKS_CLUSTER_ID")
+
+    missing = [k for k, v in {
+        "DATABRICKS_HOST (env var or profiles.yml → host)": host,
+        "DATABRICKS_TOKEN (env var or profiles.yml → token)": token,
+    }.items() if not v]
+
+    if missing:
+        raise EnvironmentError(
+            "Missing required Databricks credentials:\n"
+            + "\n".join(f"  - {m}" for m in missing)
+            + "\nSet env vars in .env or ensure ~/.dbt/profiles.yml is configured."
+        )
+
+    if not serverless_id and not cluster_id:
+        raise EnvironmentError(
+            "No compute configured. Set one of:\n"
+            "  - DATABRICKS_SERVERLESS_COMPUTE_ID=auto   (serverless, no cluster needed)\n"
+            "  - DATABRICKS_CLUSTER_ID=<id>              (classic cluster, must be running)"
+        )
+
+    if token and len(token) < 20:
+        raise EnvironmentError(
+            f"DATABRICKS_TOKEN appears truncated (len={len(token)}). "
+            "Check for a stale DATABRICKS_TOKEN env var: run `unset DATABRICKS_TOKEN`"
+        )
+
+    if serverless_id:
+        return DatabricksSession.builder.serverless(True).getOrCreate()
+
+    return (
+        DatabricksSession.builder
+        .remote(host=host, token=token, cluster_id=cluster_id)
+        .getOrCreate()
+    )
 
 
 # ── Dedup helper ──────────────────────────────────────────────────────────────

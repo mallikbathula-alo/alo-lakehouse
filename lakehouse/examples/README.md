@@ -103,7 +103,7 @@ on Databricks (serverless or classic cluster). Demonstrates the full development
 without needing any specific catalog tables.
 
 Key patterns:
-- `get_spark()` — shared session factory from `lakehouse/utils/session.py`
+- `get_spark()` — shared session factory from `lakehouse/utils/spark_utils.py`
 - `spark.sql("SHOW SCHEMAS / TABLES")` — catalog exploration
 - `spark.range(1, 6)` — generate a sequence DataFrame, no source needed
 - `spark.createDataFrame(rows, schema)` — typed inline data
@@ -128,7 +128,7 @@ DATABRICKS_SERVERLESS_COMPUTE_ID=auto
 # DATABRICKS_CLUSTER_ID=<your-cluster-id>
 ```
 
-`get_spark()` in `utils/session.py` checks for `DATABRICKS_SERVERLESS_COMPUTE_ID` first
+`get_spark()` in `utils/spark_utils.py` checks for `DATABRICKS_SERVERLESS_COMPUTE_ID` first
 and falls back to `DATABRICKS_CLUSTER_ID` if not set.
 
 ---

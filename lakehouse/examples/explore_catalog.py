@@ -7,7 +7,7 @@ for DataFrame operations so no catalog tables need to exist. Catalog exploration
 (SHOW SCHEMAS, SHOW TABLES) simply lists whatever is in the target catalog.
 
 Key patterns demonstrated:
-  - get_spark()             — shared session factory from lakehouse/utils/session.py;
+  - get_spark()             — shared session factory from lakehouse/utils/spark_utils.py;
                               reads credentials from .env / ~/.dbt/profiles.yml
   - spark.range()           — generate a DataFrame with no source dependency
   - spark.createDataFrame() — inline rows with an explicit StructType schema
@@ -16,7 +16,7 @@ Key patterns demonstrated:
   - spark.table()           — read an existing Delta table by 3-level name
 
 Prerequisites:
-  - DATABRICKS_CLUSTER_ID set in .env (cluster must be running)
+  - DATABRICKS_SERVERLESS_COMPUTE_ID=auto in .env (preferred), or DATABRICKS_CLUSTER_ID
   - Credentials in ~/.dbt/profiles.yml or DATABRICKS_HOST / DATABRICKS_TOKEN env vars
 
 Run:
@@ -28,10 +28,10 @@ Run:
 import os
 import sys
 
-# Add lakehouse/ to sys.path so `from utils.session import get_spark` resolves
+# Add lakehouse/ to sys.path so `from utils.spark_utils import get_spark` resolves
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from utils.session import get_spark
+from utils.spark_utils import get_spark
 from pyspark.sql import functions as F, types as T
 
 spark = get_spark()

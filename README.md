@@ -402,8 +402,8 @@ alo-lakehouse/
 │   │   └── public/                     # General reference tables (e.g. test_products)
 │   ├── tests/                          # Custom generic tests
 │   ├── utils/
-│   │   ├── session.py                  # get_spark() — Databricks Connect session factory (serverless + classic)
-│   │   └── ingest_utils.py             # Shared AutoLoader ingest helpers (logging, paths, dedup)
+│   │   ├── spark_utils.py              # get_spark(), get_logger(), dedup(), preview_table() — usable from any script
+│   │   └── ingest_utils.py             # Shopify AutoLoader helpers (paths, args, streaming/batch runners)
 │   └── examples/                       # Developer reference examples (see examples/README.md)
 │       ├── sparksql_incremental.sql    # SparkSQL incremental dbt model (self-contained)
 │       ├── pyspark_transform.py        # PySpark dbt Python model (self-contained)
