@@ -60,6 +60,36 @@
       }
     },
     {
+      "task_key": "collections",
+      "description": "Shopify Collections → shopify_gq_collections",
+      "environment_key": "ingest_env",
+      "spark_python_task": {
+        "python_file": "lakehouse/models/bronze/shopify_ingestions/shopify_collections.py",
+        "source": "GIT",
+        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+      }
+    },
+    {
+      "task_key": "giftcards",
+      "description": "Shopify Gift Cards → shopify_gq_giftcards",
+      "environment_key": "ingest_env",
+      "spark_python_task": {
+        "python_file": "lakehouse/models/bronze/shopify_ingestions/shopify_giftcards.py",
+        "source": "GIT",
+        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+      }
+    },
+    {
+      "task_key": "locations",
+      "description": "Shopify Locations → shopify_gq_locations",
+      "environment_key": "ingest_env",
+      "spark_python_task": {
+        "python_file": "lakehouse/models/bronze/shopify_ingestions/shopify_locations.py",
+        "source": "GIT",
+        "parameters": ["--run-mode", "streaming", "--source-catalog", "alo_dev", "--source-date", "2026/05/01"]
+      }
+    },
+    {
       "task_key": "transactions",
       "description": "Shopify Transactions → shopify_gq_transactions",
       "depends_on": [{"task_key": "orders"}],
