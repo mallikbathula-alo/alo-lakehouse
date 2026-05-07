@@ -66,7 +66,7 @@ operational stores.
 
 - [Quick Start](#quick-start)
 - [Python Environment](#python-environment)
-- [dbt — Sample Runs](#dbt--sample-runs)
+- [Example Runs](#example-runs)
 - [Architecture](#architecture)
 - [Common Commands](#common-commands)
 - [Unity Catalog Setup](#unity-catalog-setup)
@@ -177,91 +177,65 @@ PySpark scripts live in `lakehouse/examples/` alongside dbt models.
 
 ---
 
-## dbt — Sample Runs
+## Example Runs
 
-All `dbt` commands must be run from the `lakehouse/` directory (where `dbt_project.yml` lives).
+Reference examples live in [`lakehouse/examples/`](lakehouse/examples/README.md) — see that README for full details on each file and the patterns it demonstrates.
 
-### Verify connection
+| Example | Type | Run command |
+|---------|------|-------------|
+| `sparksql_incremental.sql` | dbt SQL model | `cd lakehouse && dbt run --select sparksql_incremental --target local` |
+| `pyspark_transform.py` | dbt Python model | `cd lakehouse && dbt run --select pyspark_transform --target local` |
+| `explore_catalog.py` | Standalone PySpark script | `just pyspark-run explore_catalog.py` |
+
+> All examples are self-contained — no catalog tables required.
+> dbt examples are disabled by default (`enabled=false`) so they never run in the pipeline.
+
+### Prerequisites
 
 ```bash
+# 1. Verify dbt connection
 cd lakehouse && dbt debug --target local
+
+# 2. For standalone PySpark scripts — configure compute in .env:
+#    Serverless (preferred, no cluster needed):
+DATABRICKS_SERVERLESS_COMPUTE_ID=auto
+#    Classic cluster (must be running):
+# DATABRICKS_CLUSTER_ID=<your-cluster-id>
 ```
 
-### Seed a reference table
+### dbt SQL model
 
 ```bash
-cd lakehouse && dbt seed --select test_products --target local
-# Creates alo_dev.public.test_products as a managed Delta table
+cd lakehouse
+
+# Full run — creates the Delta table from scratch
+dbt run --select sparksql_incremental --target local
+
+# Incremental run — merges only new rows
+dbt run --select sparksql_incremental --target local
 ```
 
-### Run a single model
+### dbt Python model
+
+Python models execute on Databricks compute (serverless or classic cluster).
 
 ```bash
-# Using just (recommended — handles cd automatically)
-just run-local br_shopify_us_orders
-
-# Raw dbt command (requires manifest — run `just get-manifest dev` first)
-cd lakehouse && dbt run --defer --select br_shopify_us_orders --target local --state .
-```
-
-### Run a dbt Python model (executes on Databricks)
-
-Python models run on Databricks compute — serverless (no cluster required) or a classic cluster.
-
-```bash
-# Reference example (self-contained, disabled by default — enable before running)
 cd lakehouse && dbt run --select pyspark_transform --target local
-# Inspect compiled output: cat target/run/lakehouse/examples/pyspark_transform.py
 ```
 
-See `lakehouse/examples/pyspark_transform.py` for the annotated example.
+### Standalone PySpark script
 
-### Run with prod data as source
+Runs locally via Databricks Connect — compute executes on Databricks serverless or a classic cluster.
 
 ```bash
-just run-prod-local br_shopify_us_orders
-# Reads from alo_prod.bronze.* — writes to your alo_dev.dbt_<name> schema
+just pyspark-run explore_catalog.py
 ```
 
-### Full refresh
+### Interactive PySpark shell
 
 ```bash
-just run-full-refresh-local br_shopify_us_orders
-```
-
-### Run an entire layer
-
-```bash
-cd lakehouse
-dbt run --select tag:bronze --target local
-dbt run --select tag:silver --target local
-dbt run --select tag:gold   --target local
-```
-
-### Run tests
-
-```bash
-cd lakehouse
-dbt test --select <model_name>         # test a specific model
-dbt test --select tag:bronze           # test all bronze models
-```
-
-### Run modified models only (same as CI)
-
-```bash
-# Fetch the latest prod manifest first
-just get-manifest dev
-
-cd lakehouse
-dbt run --defer --select state:modified+1 --target local --state .
-# Runs only changed models + 1 layer downstream; unmodified upstream resolves to prod
-```
-
-### Generate and serve docs
-
-```bash
-cd lakehouse && dbt docs generate && dbt docs serve
-# Opens http://localhost:8080
+just pyspark-shell
+# SparkSession ready — use spark.<tab>
 ```
 
 ---
