@@ -3,7 +3,7 @@ Execute a SQL file against Databricks, statement by statement.
 Credentials are read from ~/.dbt/profiles.yml (lakehouse → local target).
 
 Usage:
-    uv run python scripts/run_sql.py <path/to/file.sql>
+    uv run python tools/run_sql.py <path/to/file.sql>
     just run-sql databricks/permissions/unity_catalog_setup_dev.sql
 """
 
@@ -71,6 +71,6 @@ def run_sql_file(sql_file: str) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: uv run python scripts/run_sql.py <path/to/file.sql>")
+        print("Usage: uv run python tools/run_sql.py <path/to/file.sql>")
         sys.exit(1)
     run_sql_file(sys.argv[1])

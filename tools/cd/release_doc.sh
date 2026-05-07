@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Generate release notes between two tags and upload to S3
-# Usage: ./scripts/cd/release_doc.sh <env> [prev_tag] [latest_tag]
+# Usage: ./tools/cd/release_doc.sh <env> [prev_tag] [latest_tag]
 set -euo pipefail
 
 ENV="${1:-prod}"

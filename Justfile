@@ -9,7 +9,7 @@ dbt-deps:
     cd lakehouse && dbt deps
 
 setup:
-    ./scripts/setup.sh
+    ./tools/setup.sh
 
 # ── Authentication ─────────────────────────────────────────────────────────────
 
@@ -42,12 +42,12 @@ deploy-workflows env="dev":
 # ── SQL Runner ────────────────────────────────────────────────────────────────
 
 run-sql file:
-    uv run python scripts/run_sql.py {{file}}
+    uv run python tools/run_sql.py {{file}}
 
 # ── Permissions ────────────────────────────────────────────────────────────────
 
 permissions env dry-run="true":
-    uv run ./scripts/permissions/unity_catalog_permissions.py \
+    uv run ./tools/permissions/unity_catalog_permissions.py \
         --env {{env}} \
         --dry-run {{dry-run}}
 
@@ -84,13 +84,13 @@ pyspark-shell:
 # ── Release Management ────────────────────────────────────────────────────────
 
 tag type:
-    cd scripts/cd && ./tag.sh {{type}}
+    cd tools/cd && ./tag.sh {{type}}
 
 tag-with-release-doc type env="dev":
-    cd scripts/cd && ./tag_with_release_doc.sh "{{type}}" "{{env}}"
+    cd tools/cd && ./tag_with_release_doc.sh "{{type}}" "{{env}}"
 
 generate-release-notes env previous_tag="" latest_tag="": (ecr-login env)
-    cd scripts/cd && ./release_doc.sh "{{env}}" "{{previous_tag}}" "{{latest_tag}}"
+    cd tools/cd && ./release_doc.sh "{{env}}" "{{previous_tag}}" "{{latest_tag}}"
 
 upload-release-notes env: (ecr-login env)
     aws s3 cp ./release_notes s3://alo-{{env}}-de-docs/release_notes --recursive \
@@ -105,7 +105,7 @@ generate-upload-and-delete-release-notes env previous_tag="" latest_tag="": \
     delete-release-notes
 
 rollback:
-    scripts/cd/rollback.sh
+    tools/cd/rollback.sh
 
 ebf:
-    scripts/cd/ebf.sh
+    tools/cd/ebf.sh

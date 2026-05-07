@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: ./scripts/cd/tag.sh patch|minor|major
+# Usage: ./tools/cd/tag.sh patch|minor|major
 set -euo pipefail
 
 TYPE="${1:-patch}"

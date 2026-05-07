@@ -5,12 +5,11 @@ unity_catalog_permissions.py
 Applies Unity Catalog permissions (GRANT / REVOKE) across all schemas in
 the alo_dev or alo_prod catalog.
 
-Replaces scripts/permissions/database_permission.py from is-redshift with
-Unity Catalog compatible SQL via the Databricks SDK.
+Applies Unity Catalog GRANTs via the Databricks SDK.
 
 Usage:
-    python scripts/permissions/unity_catalog_permissions.py --env dev --dry-run true
-    python scripts/permissions/unity_catalog_permissions.py --env prod --dry-run false
+    python tools/permissions/unity_catalog_permissions.py --env dev --dry-run true
+    python tools/permissions/unity_catalog_permissions.py --env prod --dry-run false
 """
 
 from __future__ import annotations

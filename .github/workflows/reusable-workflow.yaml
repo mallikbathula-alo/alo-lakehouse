@@ -50,7 +50,7 @@ jobs:
 
       - name: Apply Unity Catalog permissions
         run: |
-          uv run python scripts/permissions/unity_catalog_permissions.py \
+          uv run python tools/permissions/unity_catalog_permissions.py \
             --env ${{ inputs.env }} \
             --dry-run false
 

@@ -17,13 +17,12 @@
 - [ ] No hardcoded catalog/schema names (using `{{ ref() }}` / `{{ source() }}`)
 - [ ] Incremental models have a proper `is_incremental()` filter
 - [ ] Large tables use `cluster_by` for query performance
-- [ ] Monte Carlo monitors updated if new critical tables added
 
 ## Unity Catalog Impact
 <!-- Does this add new schemas or change permissions? -->
 - [ ] No Unity Catalog changes
 - [ ] New schema added — `databricks/permissions/unity_catalog_setup.sql` updated
-- [ ] Permission changes — `scripts/permissions/unity_catalog_permissions.py` updated
+- [ ] Permission changes — `tools/permissions/unity_catalog_permissions.py` updated
 
 ## Deployment Notes
 <!-- Anything special needed for dev/prod deploy? Full refresh required? -->

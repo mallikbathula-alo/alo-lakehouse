@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tag + generate and upload release notes in one step
-# Usage: ./scripts/cd/tag_with_release_doc.sh patch|minor|major dev|prod
+# Usage: ./tools/cd/tag_with_release_doc.sh patch|minor|major dev|prod
 set -euo pipefail
 
 TYPE="${1:-patch}"

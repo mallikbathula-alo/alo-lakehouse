@@ -98,7 +98,7 @@ operational stores.
 ```bash
 git clone git@github.com:mallikbathula-alo/alo-lakehouse.git
 cd alo-lakehouse
-./scripts/setup.sh       # installs prerequisites, creates .venv, installs all deps
+./tools/setup.sh       # installs prerequisites, creates .venv, installs all deps
 ```
 
 After setup, configure credentials:
@@ -519,10 +519,13 @@ alo-lakehouse/
 │       ├── dev_workspace_setup.sql     # Dev catalog, schemas, grants
 │       ├── prod_account_setup.sh       # Prod storage credential + external location
 │       └── prod_workspace_setup.sql    # Prod catalog, schemas, grants
-├── scripts/
-│   ├── setup.sh                        # Local dev bootstrap (all prerequisites)
-│   ├── run_sql.py                      # SQL file runner for setup scripts
-│   └── permissions/                    # Unity Catalog GRANT management
+├── tools/                              # Dev, deployment, and admin utilities (see tools/README.md)
+│   ├── setup.sh                        # Local dev bootstrap (installs all prerequisites)
+│   ├── run_sql.py                      # Executes SQL files against Databricks SQL Warehouse
+│   ├── permissions/
+│   │   └── unity_catalog_permissions.py  # Applies Unity Catalog GRANTs (runs in CI)
+│   ├── cd/                             # Release management: tag, rollback, ebf, release notes
+│   └── templates/                      # dbt profiles.yml template
 ├── lakehouse/
 │   ├── dbt_project.yml
 │   ├── packages.yml
