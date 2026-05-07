@@ -201,7 +201,12 @@ def run_streaming(
         written = final.count()
         writer = final.write.format("delta").mode("append").option("mergeSchema", "true")
         if cols:
-            writer = writer.clusterBy(*cols)
+            valid_cols = [c for c in cols if c in final.columns]
+            missing = set(cols) - set(valid_cols)
+            if missing:
+                log.warning("cluster_cols not found in schema, skipping: %s", sorted(missing))
+            if valid_cols:
+                writer = writer.clusterBy(*valid_cols)
         writer.saveAsTable(output_table)
         _total_written[0] += written
         log.info("Micro-batch %s: %s rows written → %s", batch_id, f"{written:,}", output_table)
@@ -258,6 +263,11 @@ def run_batch(
         .option("overwriteSchema", "true")
     )
     if cols:
-        writer = writer.clusterBy(*cols)
+        valid_cols = [c for c in cols if c in final.columns]
+        missing = set(cols) - set(valid_cols)
+        if missing:
+            log.warning("cluster_cols not found in schema, skipping: %s", sorted(missing))
+        if valid_cols:
+            writer = writer.clusterBy(*valid_cols)
     writer.saveAsTable(paths["output_table"])
     log.info("Run complete — %s rows written this run → %s", f"{written:,}", paths["output_table"])

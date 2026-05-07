@@ -220,6 +220,9 @@ def preview_table(
     Default is False — total rows only, no schema or sample output.
     """
     log = logger or get_logger("preview")
+    if not spark.catalog.tableExists(output_table):
+        log.warning("Table %s does not exist yet — no rows written this run", output_table)
+        return
     df = spark.table(output_table)
     count = df.count()
     log.info("Total rows in %s: %s", output_table, f"{count:,}")
